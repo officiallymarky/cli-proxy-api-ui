@@ -64,6 +64,12 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
     let listen_url =
         read_config_port(&settings.config_path).map(|port| format!("http://localhost:{port}/v1"));
 
+    let gateway_url = if settings.vercel_gateway_enabled {
+        Some("https://ai-gateway.vercel.sh".to_string())
+    } else {
+        None
+    };
+
     Ok(StatusResponse {
         running: child_guard.is_some(),
         pid: child_guard.as_ref().map(|child| child.id()),
@@ -73,6 +79,8 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
         config_valid,
         command,
         listen_url,
+        gateway_url,
+        gateway_enabled: settings.vercel_gateway_enabled,
     })
 }
 

@@ -17,6 +17,12 @@ const autostartToggle = document.getElementById("autostartToggle");
 const startProxyAutomaticallyInput = document.getElementById("startProxyAutomatically");
 const proxyToggle = document.getElementById("proxyToggle");
 
+const vercelGatewayToggle = document.getElementById("vercelGatewayToggle");
+const vercelGatewayApiKey = document.getElementById("vercelGatewayApiKey");
+const gatewayFields = document.getElementById("gatewayFields");
+const gatewayUrlRow = document.getElementById("gatewayUrlRow");
+const gatewayUrlEl = document.getElementById("gatewayUrl");
+
 const themeToggleBtn = document.getElementById("themeToggle");
 const themeBulb = document.getElementById("themeBulb");
 
@@ -102,6 +108,13 @@ function applyTheme(mode) {
 function applySettingsForm(settings) {
   currentSettings = settings;
   startProxyAutomaticallyInput.checked = Boolean(settings.startProxyAutomatically);
+
+  if (vercelGatewayToggle) {
+    vercelGatewayToggle.checked = Boolean(settings.vercelGatewayEnabled);
+  }
+  if (vercelGatewayApiKey) {
+    vercelGatewayApiKey.value = settings.vercelGatewayApiKey || "";
+  }
 }
 
 const PROVIDER_STYLES = {
@@ -137,6 +150,31 @@ function renderProviders(providers = []) {
     name.className = "provider-name";
     name.textContent = provider.name;
 
+    const toggleLabel = document.createElement("label");
+    toggleLabel.className = "toggle-label provider-toggle";
+    const toggle = document.createElement("input");
+    toggle.type = "checkbox";
+    toggle.checked = provider.enabled;
+    toggle.addEventListener("change", async () => {
+      if (!currentSettings) return;
+      const updated = currentSettings.providers.map(p =>
+        p.id === provider.id ? { ...p, enabled: toggle.checked } : p
+      );
+      try {
+        const saved = await req("/api/settings", { method: "POST", body: JSON.stringify({ ...currentSettings, providers: updated }) });
+        applySettingsForm(saved);
+        showNotice(`${provider.name} ${toggle.checked ? "enabled" : "disabled"}`);
+      } catch (err) {
+        showNotice(err.message);
+        toggle.checked = !toggle.checked;
+      }
+    });
+    toggleLabel.append(toggle);
+    const pill = document.createElement("span");
+    pill.className = "skeuo-pill";
+    pill.innerHTML = '<span class="skeuo-track"></span><i class="skeuo-knob"></i><span class="skeuo-off">OFF</span><span class="skeuo-on">ON</span>';
+    toggleLabel.append(pill);
+
     const status = document.createElement("span");
     status.textContent = provider.connected ? "Connected" : "Not detected";
     status.className = provider.connected ? "provider-status good" : "provider-status warn";
@@ -154,7 +192,7 @@ function renderProviders(providers = []) {
       }
     });
 
-    item.append(name, status, button);
+    item.append(name, toggleLabel, status, button);
     providersEl.appendChild(item);
   }
 }
@@ -238,6 +276,40 @@ startProxyAutomaticallyInput.addEventListener("change", () => {
     .catch((err) => showNotice(err.message));
 });
 
+vercelGatewayToggle?.addEventListener("change", async () => {
+  await saveGatewaySettings();
+});
+
+vercelGatewayApiKey?.addEventListener("change", () => saveGatewaySettings());
+
+async function saveGatewaySettings() {
+  if (!currentSettings) return;
+  const enabled = vercelGatewayToggle.checked;
+  const next = {
+    ...currentSettings,
+    vercelGatewayEnabled: enabled,
+    vercelGatewayApiKey: vercelGatewayApiKey.value.trim(),
+  };
+  try {
+    const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
+    applySettingsForm(saved);
+    if (gatewayUrlRow && gatewayUrlEl) {
+      if (enabled) {
+        gatewayUrlRow.hidden = false;
+        gatewayUrlEl.textContent = "https://ai-gateway.vercel.sh";
+        gatewayUrlEl.className = "status-value mono good";
+      } else {
+        gatewayUrlRow.hidden = false;
+        gatewayUrlEl.textContent = "Disabled";
+        gatewayUrlEl.className = "status-value mono warn";
+      }
+    }
+    showNotice("Gateway settings saved");
+  } catch (err) {
+    showNotice(err.message);
+  }
+}
+
 themeBulb?.addEventListener("change", () => {
   const mode = themeBulb.checked ? "light" : "dark";
   applyTheme(mode);
@@ -263,6 +335,12 @@ closeProvidersBtn.addEventListener("click", () => {
 
 providersModal.addEventListener("click", (e) => {
   if (e.target === providersModal) providersModal.hidden = true;
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !providersModal.hidden) {
+    providersModal.hidden = true;
+  }
 });
 
 async function checkAutostart() {
@@ -314,6 +392,16 @@ async function refreshStatus() {
     } else {
       listenUrlEl.textContent = "—";
       listenUrlEl.className = "status-value mono";
+    }
+  }
+
+  if (gatewayUrlRow && gatewayUrlEl) {
+    if (status.gatewayUrl) {
+      gatewayUrlRow.hidden = false;
+      gatewayUrlEl.textContent = status.gatewayEnabled ? status.gatewayUrl : "Disabled";
+      gatewayUrlEl.className = `status-value mono ${status.gatewayEnabled ? "good" : "warn"}`;
+    } else {
+      gatewayUrlRow.hidden = true;
     }
   }
 

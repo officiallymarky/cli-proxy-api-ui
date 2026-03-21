@@ -459,7 +459,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  width: min(520px, 90vw);
+  width: min(560px, 92vw);
   max-height: 80vh;
   overflow: auto;
   padding: 16px;
@@ -518,6 +518,24 @@ h2 {
   justify-content: space-between;
   gap: 10px;
   margin-bottom: 14px;
+}
+
+.panel-head-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel-head-label {
+  font-size: 0.78rem;
+  color: var(--text-2);
+  font-weight: 500;
 }
 
 /* ── Power toggle ── */
@@ -948,7 +966,7 @@ h2 {
 
 .providers-head {
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 100px 110px;
+  grid-template-columns: minmax(100px, 1fr) 60px 100px 110px;
   gap: 8px;
   padding: 8px 12px;
   font-size: 0.7rem;
@@ -959,8 +977,8 @@ h2 {
   font-weight: 500;
 }
 
-.providers-head span:nth-child(2),
-.providers-head span:nth-child(3) {
+.providers-head span:nth-child(3),
+.providers-head span:nth-child(4) {
   text-align: right;
 }
 
@@ -973,7 +991,7 @@ h2 {
   background: var(--panel);
   padding: 10px 12px;
   display: grid;
-  grid-template-columns: minmax(120px, 1fr) 100px 110px;
+  grid-template-columns: minmax(100px, 1fr) 60px 100px 110px;
   align-items: center;
   gap: 8px;
   transition: background 0.6s ease, border-color 0.1s ease;
@@ -1009,6 +1027,72 @@ h2 {
 .provider .btn {
   width: 110px;
   justify-self: end;
+}
+
+.provider-toggle {
+  justify-self: center;
+}
+
+.provider-toggle .skeuo-pill {
+  width: 42px;
+  height: 21px;
+}
+
+.provider-toggle .skeuo-pill::after {
+  width: 44px;
+  height: 23px;
+  border-radius: 12px;
+}
+
+.provider-toggle .skeuo-track {
+  width: 32px;
+  height: 13px;
+}
+
+.provider-toggle .skeuo-track::after {
+  width: 30px;
+  height: 11px;
+}
+
+.provider-toggle .skeuo-knob {
+  width: 17px;
+  height: 17px;
+  top: 2px;
+  left: 3px;
+}
+
+.provider-toggle .skeuo-knob::after {
+  width: 14px;
+  height: 14px;
+}
+
+.provider-toggle input:checked ~ .skeuo-pill .skeuo-knob {
+  left: 22px;
+}
+
+/* ── Vercel key section ── */
+
+.vercel-key-section {
+  background: var(--panel-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  margin-top: 14px;
+  padding: 2px 0;
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+
+.vercel-key-section .gateway-hint {
+  border-bottom: 1px solid var(--border-subtle);
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.vercel-key-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
 }
 
 /* ── Buttons ── */
@@ -1260,6 +1344,58 @@ input:not([type="checkbox"]):not([type="radio"]):focus {
 .models-empty {
   font-size: 0.78rem;
   color: var(--text-3);
+}
+
+/* ── Vercel Gateway ── */
+
+.gateway-section {
+  margin-top: 14px;
+  background: var(--panel-inset);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 2px 0;
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+
+.gateway-title {
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+  font-weight: 500;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.gateway-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 12px;
+}
+
+.gateway-row + .gateway-row {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.gateway-fields {
+  margin-top: 0;
+}
+
+.gateway-fields[hidden] {
+  display: none;
+}
+
+.gateway-input {
+  width: 200px;
+}
+
+.gateway-hint {
+  color: var(--text-2);
+  font-size: 0.78rem;
+  line-height: 1.45;
 }
 
 /* ── Responsive ── */

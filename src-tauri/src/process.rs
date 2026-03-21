@@ -26,6 +26,8 @@ pub struct StatusResponse {
     pub config_valid: bool,
     pub command: String,
     pub listen_url: Option<String>,
+    pub gateway_url: Option<String>,
+    pub gateway_enabled: bool,
 }
 
 /// Collection of log entries returned to the frontend.
