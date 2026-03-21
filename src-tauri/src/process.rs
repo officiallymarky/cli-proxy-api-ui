@@ -1,4 +1,6 @@
-use crate::settings::{build_runtime_args, load_settings, LogEntry, Settings, MAX_LOG_LINES};
+use crate::settings::{
+    build_runtime_args, load_settings, read_config_port, LogEntry, Settings, MAX_LOG_LINES,
+};
 use chrono::Utc;
 use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
@@ -118,6 +120,57 @@ pub fn resolve_binary(binary_path: &str) -> Option<PathBuf> {
     })
 }
 
+/// Kill any stale cli-proxy-api process listening on the given port.
+fn kill_stale_on_port(port: u16, logs: &std::sync::Arc<std::sync::Mutex<Vec<LogEntry>>>) {
+    // Use lsof to find PIDs listening on the port.
+    let output = match Command::new("lsof")
+        .args(["-i", &format!(":{port}"), "-t", "-sTCP:LISTEN"])
+        .output()
+    {
+        Ok(o) => o,
+        Err(_) => return,
+    };
+
+    if !output.status.success() {
+        return;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    for pid_str in stdout.lines() {
+        let pid_str = pid_str.trim();
+        if pid_str.is_empty() {
+            continue;
+        }
+        let Ok(pid) = pid_str.parse::<u32>() else {
+            continue;
+        };
+
+        // Verify it's a cli-proxy-api process.
+        let cmdline_path = format!("/proc/{pid}/cmdline");
+        let Ok(cmdline) = std::fs::read_to_string(&cmdline_path) else {
+            continue;
+        };
+        let cmd = cmdline.replace('\0', " ");
+        if !cmd.contains("cli-proxy-api") {
+            push_log_arc(
+                logs,
+                "system",
+                &format!("Port {port} used by another process (PID {pid}), skipping"),
+            );
+            continue;
+        }
+
+        push_log_arc(
+            logs,
+            "system",
+            &format!("Killing stale cli-proxy-api (PID {pid}) on port {port}"),
+        );
+        let _ = Command::new("kill").arg(pid_str).status();
+        // Give the OS a moment to release the port.
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+}
+
 /// Start the cli-proxy-api process, capturing stdout/stderr into logs.
 ///
 /// Enhances the inherited PATH with common user directories so the binary
@@ -129,6 +182,11 @@ pub fn server_start_inner(state: &AppState) -> Result<(), String> {
 
     if state.server_child.lock().unwrap().is_some() {
         return Err("Server is already running.".to_string());
+    }
+
+    // Kill any stale process on the configured port.
+    if let Some(port) = read_config_port(&settings.config_path) {
+        kill_stale_on_port(port, &state.logs);
     }
 
     let args = build_runtime_args(&settings);
