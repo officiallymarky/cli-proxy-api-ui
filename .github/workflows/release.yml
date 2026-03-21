@@ -60,5 +60,5 @@ jobs:
           releaseName: "CLI Proxy API UI ${{ github.ref_name }}"
           releaseBody: "See the assets below to download and install."
           releaseDraft: false
-          releasePrerelease: false
+          prerelease: false
           includeDebug: false
