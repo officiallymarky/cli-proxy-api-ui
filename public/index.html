@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CLI Proxy API UI</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="window-shell">
+      <header class="titlebar">
+        <div class="brand" data-tauri-drag-region>
+          <h1>CLI Proxy API UI</h1>
+        </div>
+        <div class="title-actions">
+          <button id="themeToggle" class="theme-toggle" aria-label="Toggle theme" title="Theme">
+            <div class="bulb-switch">
+              <input type="checkbox" id="themeBulb" />
+              <label for="themeBulb">
+                <i class="bulb">
+                  <span class="bulb-center"></span>
+                  <span class="filament-1"></span>
+                  <span class="filament-2"></span>
+                  <span class="reflections"><span></span></span>
+                  <span class="sparks">
+                    <i class="spark1"></i>
+                    <i class="spark2"></i>
+                    <i class="spark3"></i>
+                    <i class="spark4"></i>
+                  </span>
+                </i>
+              </label>
+            </div>
+          </button>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <article class="panel status-panel">
+          <div class="panel-head">
+            <h2>Proxy</h2>
+            <label class="power-toggle" title="Start or stop proxy">
+              <input id="proxyToggle" type="checkbox" />
+              <span class="skeuo-pill">
+                <span class="skeuo-track"></span>
+                <i class="skeuo-knob"></i>
+                <span class="skeuo-off">OFF</span>
+                <span class="skeuo-on">ON</span>
+              </span>
+            </label>
+          </div>
+
+          <div class="auto-start-row">
+            <span class="status-key">Auto Start</span>
+            <div class="auto-start-options">
+              <label class="toggle-label">
+                <input id="autostartToggle" type="checkbox" />
+                <span>System</span>
+                <span class="skeuo-pill">
+                  <span class="skeuo-track"></span>
+                  <i class="skeuo-knob"></i>
+                  <span class="skeuo-off">OFF</span>
+                  <span class="skeuo-on">ON</span>
+                </span>
+              </label>
+              <label class="toggle-label">
+                <input id="startProxyAutomatically" type="checkbox" />
+                <span>Application</span>
+                <span class="skeuo-pill">
+                  <span class="skeuo-track"></span>
+                  <i class="skeuo-knob"></i>
+                  <span class="skeuo-off">OFF</span>
+                  <span class="skeuo-on">ON</span>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="status-grid">
+            <div class="status-row">
+              <span class="status-key">Proxy</span>
+              <span id="serverBadge" class="status-value">Checking...</span>
+            </div>
+            <div class="status-row">
+              <span class="status-key">Endpoint</span>
+              <span id="listenUrl" class="status-value mono">—</span>
+            </div>
+            <div class="status-row">
+              <span class="status-key">Cli Proxy API</span>
+              <span id="binaryBadge" class="status-value">Checking...</span>
+            </div>
+            <div class="status-row">
+              <span class="status-key">Config</span>
+              <span id="configBadge" class="status-value">Checking...</span>
+            </div>
+            <div class="status-row">
+              <span class="status-key">Providers</span>
+              <span class="status-value">
+                <span id="providerSummary">—</span>
+                <button id="openProviders" class="btn ghost btn-sm" title="Manage providers">Manage</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="providers-wrap">
+            <h3 class="section-toggle" data-target="modelsContent">
+              <span>Models</span>
+              <span class="chevron"></span>
+            </h3>
+            <div id="modelsContent" class="section-body">
+              <div id="models" class="models-list"></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="panel logs-panel">
+          <div class="panel-head">
+            <h2>Logs</h2>
+            <button id="exportLogs" class="btn ghost" title="Export logs">Export</button>
+          </div>
+          <pre id="logs" class="logs"></pre>
+        </article>
+      </section>
+
+      <div id="providersModal" class="modal-overlay" hidden>
+        <div class="modal">
+          <div class="modal-head">
+            <h2>Providers</h2>
+            <button id="closeProviders" class="theme-toggle" aria-label="Close">&times;</button>
+          </div>
+          <div class="providers-table">
+            <div class="providers-head">
+              <span>Provider</span>
+              <span>Status</span>
+              <span>Action</span>
+            </div>
+            <div id="providers" class="providers"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "cli-proxy-api-ui",
+  "version": "0.1.0",
+  "description": "Desktop control panel for cli-proxy-api (no local web server)",
+  "type": "module",
+  "scripts": {
+    "desktop": "tauri dev",
+    "desktop:wayland": "WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 tauri dev",
+    "dist": "tauri build",
+    "check:rust": "cargo check --manifest-path src-tauri/Cargo.toml"
+  },
+  "keywords": [
+    "cli-proxy-api",
+    "linux",
+    "ui"
+  ],
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
