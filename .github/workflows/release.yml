@@ -4,6 +4,20 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      linux:
+        description: "Build Linux"
+        type: boolean
+        default: true
+      macos:
+        description: "Build macOS"
+        type: boolean
+        default: true
+      windows:
+        description: "Build Windows"
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -12,29 +26,18 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: ubuntu-22.04
-            rust_target: x86_64-unknown-linux-gnu
-          - platform: macos-latest
-            rust_target: aarch64-apple-darwin
-          - platform: windows-latest
-            rust_target: x86_64-pc-windows-msvc
-
-    runs-on: ${{ matrix.platform }}
+  linux:
+    if: github.event_name == 'push' || inputs.linux
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.rust_target }}
+          targets: x86_64-unknown-linux-gnu
 
       - name: Install Linux dependencies
-        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
@@ -51,8 +54,86 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             src-tauri/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
+          key: Linux-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: Linux-cargo-
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "CLI Proxy API UI ${{ github.ref_name }}"
+          releaseBody: "See the assets below to download and install."
+          releaseDraft: false
+          prerelease: false
+          tauriScript: npx @tauri-apps/cli
+          includeDebug: false
+
+  macos:
+    if: github.event_name == 'push' || inputs.macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            src-tauri/target
+          key: macOS-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: macOS-cargo-
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "CLI Proxy API UI ${{ github.ref_name }}"
+          releaseBody: "See the assets below to download and install."
+          releaseDraft: false
+          prerelease: false
+          tauriScript: npx @tauri-apps/cli
+          includeDebug: false
+
+  windows:
+    if: github.event_name == 'push' || inputs.windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\.cargo\registry
+            ~\.cargo\git
+            src-tauri\target
+          key: Windows-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: Windows-cargo-
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
