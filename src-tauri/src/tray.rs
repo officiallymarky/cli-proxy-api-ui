@@ -44,8 +44,16 @@ fn resolve_desktop_exec() -> Option<String> {
 /// Always uses the release binary path so the menu entry works standalone.
 pub fn install_desktop_entry() {
     #[cfg(not(target_os = "linux"))]
-    return;
+    {
+        return;
+    }
 
+    #[cfg(target_os = "linux")]
+    install_desktop_entry_linux();
+}
+
+#[cfg(target_os = "linux")]
+fn install_desktop_entry_linux() {
     let home = match std::env::var("HOME") {
         Ok(h) if !h.is_empty() => h,
         _ => {

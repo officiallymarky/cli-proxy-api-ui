@@ -92,6 +92,7 @@ pub fn open_terminal_and_run(binary: &str, args: &[&str]) -> Result<(), String> 
 }
 
 /// Simple shell escape: wraps in single quotes and escapes embedded single quotes.
+#[allow(dead_code)]
 fn shell_escape(s: &str) -> String {
     if s.is_empty() {
         return "''".to_string();
