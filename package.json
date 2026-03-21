@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "start": "node bin/cli-proxy-api-ui.js",
-    "tauri": "tauri",
+    "tauri": "npx tauri",
     "desktop": "tauri dev",
     "desktop:wayland": "WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 tauri dev",
     "build:binary": "tauri build --no-bundle",
