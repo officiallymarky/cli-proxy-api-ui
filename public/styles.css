@@ -39,6 +39,10 @@
   --toggle-label-shadow: rgba(255,255,255,0.2);
 }
 
+/* Dark mode variables are intentionally defined in two places:
+   1. @media query below — auto-detects system dark preference
+   2. body[data-theme="dark"] — manual toggle override
+   Both must contain identical values. */
 @media (prefers-color-scheme: dark) {
   body:not([data-theme="light"]) {
     --bg: #111318;
@@ -556,7 +560,6 @@ h2 {
 .power-toggle input:disabled ~ .skeuo-pill {
   opacity: 0.4;
   cursor: not-allowed;
-}
 }
 
 /* ── Status section ── */

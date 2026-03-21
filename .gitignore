@@ -4,3 +4,5 @@ npm-debug.log*
 dist/
 release/
 src-tauri/target/
+bin/cli-proxy-api-ui
+bin/cli-proxy-api-ui.exe
