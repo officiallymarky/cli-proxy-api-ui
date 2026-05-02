@@ -7,6 +7,7 @@ const configBadge = document.getElementById("configBadge");
 const providersEl = document.getElementById("providers");
 const providerSummaryEl = document.getElementById("providerSummary");
 const modelsEl = document.getElementById("models");
+const refreshModelsBtn = document.getElementById("refreshModels");
 const logsEl = document.getElementById("logs");
 const exportLogsBtn = document.getElementById("exportLogs");
 const providersModal = document.getElementById("providersModal");
@@ -29,6 +30,8 @@ const themeBulb = document.getElementById("themeBulb");
 let currentSettings = null;
 const THEME_KEY = "ui.theme";
 let proxyActionPending = false;
+let latestListenUrl = null;
+let initialModelsRefreshTimer = null;
 
 async function req(route, options = {}) {
   const method = options.method || "GET";
@@ -202,22 +205,62 @@ async function refreshProviders() {
   renderProviders(providers);
 }
 
-async function refreshModels(listenUrl) {
-  if (!listenUrl) {
-    modelsEl.innerHTML = '<span class="models-empty">No endpoint</span>';
+function renderModels(models) {
+  modelsEl.innerHTML = "";
+  if (models.length === 0) {
+    modelsEl.innerHTML = '<span class="models-empty">No models</span>';
     return;
   }
+  for (const model of models) {
+    const tag = document.createElement("span");
+    tag.className = "model-tag";
+    tag.textContent = model.id;
+    modelsEl.appendChild(tag);
+  }
+}
+
+async function refreshModels(listenUrl) {
+  if (initialModelsRefreshTimer) {
+    clearTimeout(initialModelsRefreshTimer);
+    initialModelsRefreshTimer = null;
+  }
+  if (!listenUrl) {
+    modelsEl.innerHTML = '<span class="models-empty">No endpoint</span>';
+    if (refreshModelsBtn) refreshModelsBtn.disabled = true;
+    return;
+  }
+  if (refreshModelsBtn) refreshModelsBtn.disabled = true;
   try {
+    modelsEl.innerHTML = '<span class="models-empty">Loading...</span>';
     const res = await fetch(`${listenUrl}/models`);
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json();
     const models = data.data || [];
-    modelsEl.innerHTML = models
-      .map((m) => `<span class="model-tag">${m.id}</span>`)
-      .join("");
+    renderModels(models);
   } catch {
     modelsEl.innerHTML = '<span class="models-empty">Unavailable</span>';
+  } finally {
+    if (refreshModelsBtn) refreshModelsBtn.disabled = false;
   }
+}
+
+function scheduleInitialModelsRefresh(listenUrl) {
+  if (initialModelsRefreshTimer) {
+    clearTimeout(initialModelsRefreshTimer);
+    initialModelsRefreshTimer = null;
+  }
+  if (!listenUrl) {
+    refreshModels(null).catch((err) => showNotice(err.message));
+    return;
+  }
+  modelsEl.innerHTML = '<span class="models-empty">Loading...</span>';
+  if (refreshModelsBtn) refreshModelsBtn.disabled = true;
+  initialModelsRefreshTimer = setTimeout(() => {
+    initialModelsRefreshTimer = null;
+    if (latestListenUrl === listenUrl) {
+      refreshModels(listenUrl).catch((err) => showNotice(err.message));
+    }
+  }, 750);
 }
 
 async function refreshLogs() {
@@ -380,8 +423,16 @@ exportLogsBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+refreshModelsBtn?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  refreshModels(latestListenUrl).catch((err) => showNotice(err.message));
+});
+
 async function refreshStatus() {
   const status = await req("/api/status");
+  const nextListenUrl = status.running ? status.listenUrl : null;
+  const connectionChanged = nextListenUrl !== latestListenUrl;
+  latestListenUrl = nextListenUrl;
   serverBadge.textContent = status.running && status.pid ? `Running (PID ${status.pid})` : status.running ? "Running" : "Stopped";
   serverBadge.className = `status-value ${status.running ? "good" : "warn"}`;
 
@@ -420,7 +471,10 @@ async function refreshStatus() {
     proxyToggle.disabled = !status.binaryAvailable || proxyActionPending;
   }
 
-  await refreshModels(status.running ? status.listenUrl : null);
+  if (refreshModelsBtn) refreshModelsBtn.disabled = !latestListenUrl;
+  if (connectionChanged || !modelsEl.innerHTML) {
+    scheduleInitialModelsRefresh(latestListenUrl);
+  }
 }
 
 async function refreshAll() {
