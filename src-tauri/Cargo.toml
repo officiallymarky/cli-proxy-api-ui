@@ -1,6 +1,6 @@
 [package]
 name = "cli-proxy-api-ui"
-version = "0.1.0"
+version = "0.1.1"
 description = "Desktop control panel for cli-proxy-api"
 authors = ["cli-proxy-api-ui"]
 license = "MIT"
