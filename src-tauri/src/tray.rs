@@ -12,5 +12,3 @@ pub fn decode_tray_icon() -> (u32, u32, Vec<u8>) {
     let h = rgba.height();
     (w, h, rgba.into_raw())
 }
-
-

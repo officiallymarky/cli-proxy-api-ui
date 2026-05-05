@@ -148,6 +148,14 @@ fn run_provider_auth(state: State<AppState>, provider_id: String) -> Result<(), 
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_autostart::Builder::new().build())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // Focus the existing window instead of creating a new instance
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .manage(AppState::default())
         .invoke_handler(tauri::generate_handler![
             get_settings,
