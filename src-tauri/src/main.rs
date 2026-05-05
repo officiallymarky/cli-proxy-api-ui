@@ -16,7 +16,7 @@ use settings::{
     normalize_settings, read_config_port, save_settings_file, Settings,
 };
 use terminal::open_terminal_and_run;
-use tray::{decode_tray_icon, install_desktop_entry};
+use tray::decode_tray_icon;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
@@ -175,8 +175,6 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let _ = window.set_icon(window_icon);
             }
-
-            install_desktop_entry();
 
             let tray_builder = TrayIconBuilder::new()
                 .menu(&menu)
