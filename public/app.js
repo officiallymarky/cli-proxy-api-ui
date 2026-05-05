@@ -94,7 +94,7 @@ function preferredTheme() {
 
 function applyTheme(mode) {
   const resolved = normalizeTheme(mode || preferredTheme());
-  document.body.dataset.theme = resolved;
+  document.documentElement.dataset.theme = resolved;
   localStorage.setItem(THEME_KEY, resolved);
   if (themeBulb) {
     themeBulb.checked = resolved === "light";

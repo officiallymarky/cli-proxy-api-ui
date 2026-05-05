@@ -39,51 +39,7 @@
   --toggle-label-shadow: rgba(255,255,255,0.2);
 }
 
-/* Dark mode variables are intentionally defined in two places:
-   1. @media query below — auto-detects system dark preference
-   2. body[data-theme="dark"] — manual toggle override
-   Both must contain identical values. */
-@media (prefers-color-scheme: dark) {
-  body:not([data-theme="light"]) {
-    --bg: #111318;
-    --panel: #1a1d24;
-    --panel-inset: #15171d;
-    --text: #e1e4ea;
-    --text-2: #9099a8;
-    --text-3: #5f6777;
-    --border: #2a2e38;
-    --border-subtle: #22262f;
-    --accent: #5b8ee0;
-    --accent-hover: #719ee8;
-    --accent-subtle: #1e2a3e;
-    --green: #4eca82;
-    --green-subtle: #1a2e24;
-    --red: #ef7b72;
-    --red-subtle: #2e1c1a;
-    --amber: #e0a83a;
-    --amber-subtle: #2e2514;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
-    --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
-    --shadow-lg: 0 4px 16px rgba(0,0,0,0.35);
-    --terminal-bg: #0d0f14;
-    --terminal-text: #b8bec8;
-    --terminal-dim: #4b5263;
-    --terminal-border: #1e2128;
-    --terminal-selection: #1c2030;
-    --toggle-edge: #3a3d45;
-    --toggle-face: #2a2d35;
-    --toggle-highlight: #353840;
-    --toggle-shadow: #1a1d22;
-    --toggle-inner-edge: #252830;
-    --toggle-inner: #222530;
-    --toggle-inset: rgba(0,0,0,0.5);
-    --toggle-knob: #444750;
-    --toggle-label-off: #666;
-    --toggle-label-shadow: rgba(0,0,0,0.3);
-  }
-}
-
-body[data-theme="dark"] {
+html[data-theme="dark"] {
   --bg: #111318;
   --panel: #1a1d24;
   --panel-inset: #15171d;
@@ -1078,11 +1034,8 @@ h2 {
   background-position: right 4px center;
 }
 
-body[data-theme="dark"] .reasoning-select,
-@media (prefers-color-scheme: dark) {
-  body:not([data-theme="light"]) .reasoning-select {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%235f6777' d='M1 2l3 3 3-3z'/%3E%3C/svg%3E");
-  }
+html[data-theme="dark"] .reasoning-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%235f6777' d='M1 2l3 3 3-3z'/%3E%3C/svg%3E");
 }
 
 .reasoning-select:focus {
