@@ -25,7 +25,8 @@
     "desktop:wayland": "WEBKIT_DISABLE_DMABUF_RENDERER=1 WEBKIT_DISABLE_COMPOSITING_MODE=1 tauri dev",
     "build:binary": "tauri build --no-bundle",
     "dist": "tauri build",
-    "check:rust": "cargo check --manifest-path src-tauri/Cargo.toml"
+    "check:rust": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "ci:rust": "cargo fmt --check --manifest-path src-tauri/Cargo.toml && cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml && cargo check --manifest-path src-tauri/Cargo.toml"
   },
   "keywords": [
     "cli-proxy-api",
