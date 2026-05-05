@@ -179,6 +179,18 @@
             </div>
             <p class="meta gateway-hint">When enabled, injects official Codex system instructions into Codex API requests. This provides Codex with context about its own capabilities and behavior guidelines, which can improve response quality for coding tasks. Only affects Codex API requests.</p>
           </div>
+          <div class="vercel-key-section" style="margin-top:8px;">
+            <div class="vercel-key-row">
+              <span class="status-key">Commercial Mode</span>
+              <label class="toggle-label">
+                <input id="commercialModeToggle" type="checkbox" />
+                <span class="skeuo-pill">
+                  <span class="skeuo-track"></span><i class="skeuo-knob"></i><span class="skeuo-off">OFF</span><span class="skeuo-on">ON</span>
+                </span>
+              </label>
+            </div>
+            <p class="meta gateway-hint" style="color:var(--red);font-weight:500;">Warning: Disables high-overhead HTTP middleware to reduce per-request memory usage. Recommended to keep OFF for single-user instances. Only enable on shared instances with many concurrent users. May disable advanced routing, logging, and request processing features.</p>
+          </div>
         </div>
       </div>
     </main>

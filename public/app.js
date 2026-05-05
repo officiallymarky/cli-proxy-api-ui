@@ -25,6 +25,7 @@ const gatewayUrlRow = document.getElementById("gatewayUrlRow");
 const gatewayUrlEl = document.getElementById("gatewayUrl");
 
 const codexInstructionsToggle = document.getElementById("codexInstructionsToggle");
+const commercialModeToggle = document.getElementById("commercialModeToggle");
 
 const themeToggleBtn = document.getElementById("themeToggle");
 const themeBulb = document.getElementById("themeBulb");
@@ -122,6 +123,9 @@ function applySettingsForm(settings) {
   }
   if (codexInstructionsToggle) {
     codexInstructionsToggle.checked = Boolean(settings.codexInstructionsEnabled);
+  }
+  if (commercialModeToggle) {
+    commercialModeToggle.checked = Boolean(settings.commercialMode);
   }
 }
 
@@ -418,6 +422,22 @@ codexInstructionsToggle?.addEventListener("change", async () => {
   } catch (err) {
     showNotice(err.message);
     codexInstructionsToggle.checked = !codexInstructionsToggle.checked;
+  }
+});
+
+commercialModeToggle?.addEventListener("change", async () => {
+  if (!currentSettings) return;
+  const next = {
+    ...currentSettings,
+    commercialMode: commercialModeToggle.checked,
+  };
+  try {
+    const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
+    applySettingsForm(saved);
+    showNotice(`Commercial mode ${commercialModeToggle.checked ? "enabled" : "disabled"}`);
+  } catch (err) {
+    showNotice(err.message);
+    commercialModeToggle.checked = !commercialModeToggle.checked;
   }
 });
 

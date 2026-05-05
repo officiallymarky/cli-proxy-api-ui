@@ -31,6 +31,8 @@ pub struct Settings {
     pub vercel_gateway_api_key: String,
     #[serde(default)]
     pub codex_instructions_enabled: bool,
+    #[serde(default)]
+    pub commercial_mode: bool,
 }
 
 /// Partial settings for lenient deserialization (missing fields use defaults).
@@ -47,6 +49,7 @@ pub struct PartialSettings {
     pub vercel_gateway_enabled: Option<bool>,
     pub vercel_gateway_api_key: Option<String>,
     pub codex_instructions_enabled: Option<bool>,
+    pub commercial_mode: Option<bool>,
 }
 
 /// A single log entry from the proxy process.
@@ -275,6 +278,7 @@ pub fn default_settings() -> Result<Settings, String> {
         vercel_gateway_enabled: false,
         vercel_gateway_api_key: String::new(),
         codex_instructions_enabled: false,
+        commercial_mode: false,
     })
 }
 
@@ -294,6 +298,12 @@ pub fn default_config_yaml(auth_dir: &str) -> String {
         "".to_string(),
         "# Codex instructions injection (Codex only)".to_string(),
         "codex-instructions-enabled: false".to_string(),
+        "".to_string(),
+        "# Commercial mode — disables high-overhead HTTP middleware to reduce per-request"
+            .to_string(),
+        "# memory usage under high concurrency. Useful for shared instances with many users."
+            .to_string(),
+        "commercial-mode: false".to_string(),
         "".to_string(),
         "# Vercel AI Gateway".to_string(),
         "vercel-gateway-enabled: false".to_string(),
@@ -417,6 +427,43 @@ pub fn ensure_config_has_codex_instructions(
     next_lines.push(String::new());
     next_lines.push("# Codex instructions injection (Codex only)".to_string());
     next_lines.push(format!("codex-instructions-enabled: {}", enabled));
+    next_lines.push(String::new());
+
+    let next = format!("{}\n", next_lines.join("\n"));
+    if next != raw {
+        fs::write(config_path, next).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+/// Ensure the config file contains the commercial-mode line.
+pub fn ensure_config_has_commercial_mode(config_path: &Path, enabled: bool) -> Result<(), String> {
+    let raw = fs::read_to_string(config_path).unwrap_or_default();
+
+    let mut next_lines: Vec<String> = raw
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim_start();
+            !trimmed.starts_with("commercial-mode:")
+        })
+        .map(|s| s.to_string())
+        .collect();
+
+    while next_lines.last().is_some_and(|l| l.trim().is_empty()) {
+        next_lines.pop();
+    }
+
+    next_lines.push(String::new());
+    next_lines.push(
+        "# Commercial mode — disables high-overhead HTTP middleware to reduce per-request"
+            .to_string(),
+    );
+    next_lines.push(
+        "# memory usage under high concurrency. Useful for shared instances with many users."
+            .to_string(),
+    );
+    next_lines.push(format!("commercial-mode: {}", enabled));
     next_lines.push(String::new());
 
     let next = format!("{}\n", next_lines.join("\n"));
@@ -596,6 +643,7 @@ pub fn ensure_storage_layout(settings: &Settings) -> Result<(), String> {
         Path::new(&settings.config_path),
         settings.codex_instructions_enabled,
     )?;
+    ensure_config_has_commercial_mode(Path::new(&settings.config_path), settings.commercial_mode)?;
     ensure_config_has_reasoning_overrides(Path::new(&settings.config_path), &settings.providers)?;
     Ok(())
 }
@@ -658,6 +706,9 @@ pub fn load_settings(cache: &std::sync::Mutex<Option<Settings>>) -> Result<Setti
         }
         if let Some(v) = partial.codex_instructions_enabled {
             settings.codex_instructions_enabled = v;
+        }
+        if let Some(v) = partial.commercial_mode {
+            settings.commercial_mode = v;
         }
     }
 

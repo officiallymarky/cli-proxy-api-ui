@@ -460,7 +460,7 @@ h2 {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   width: min(700px, 95vw);
-  max-height: 80vh;
+  max-height: 96vh;
   overflow: auto;
   padding: 16px;
   animation: modal-in 180ms cubic-bezier(0.22, 1, 0.36, 1);

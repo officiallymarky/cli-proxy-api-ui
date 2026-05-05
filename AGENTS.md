@@ -1,1 +1,1 @@
-Before committing changes, always run `npm run ci:rust` from the repo root and ensure it passes.
+Never commit or push without running `npm run ci:rust` and ensuring there are no issues.
