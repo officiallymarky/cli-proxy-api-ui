@@ -21,7 +21,6 @@ const proxyToggle = document.getElementById("proxyToggle");
 
 const vercelGatewayToggle = document.getElementById("vercelGatewayToggle");
 const vercelGatewayApiKey = document.getElementById("vercelGatewayApiKey");
-const gatewayFields = document.getElementById("gatewayFields");
 const gatewayUrlRow = document.getElementById("gatewayUrlRow");
 const gatewayUrlEl = document.getElementById("gatewayUrl");
 

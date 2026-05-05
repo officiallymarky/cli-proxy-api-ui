@@ -1433,14 +1433,6 @@ input:not([type="checkbox"]):not([type="radio"]):focus {
   border-top: 1px solid var(--border-subtle);
 }
 
-.gateway-fields {
-  margin-top: 0;
-}
-
-.gateway-fields[hidden] {
-  display: none;
-}
-
 .gateway-input {
   width: 200px;
 }
