@@ -51,18 +51,6 @@
                 </span>
               </label>
             </div>
-            <div class="panel-head-right">
-              <span class="panel-head-label">Vercel</span>
-              <label class="power-toggle" title="Enable Vercel AI Gateway">
-                <input id="vercelGatewayToggle" type="checkbox" />
-                <span class="skeuo-pill">
-                  <span class="skeuo-track"></span>
-                  <i class="skeuo-knob"></i>
-                  <span class="skeuo-off">OFF</span>
-                  <span class="skeuo-on">ON</span>
-                </span>
-              </label>
-            </div>
           </div>
 
           <div class="auto-start-row">
@@ -99,10 +87,6 @@
             <div class="status-row">
               <span class="status-key">Endpoint</span>
               <span id="listenUrl" class="status-value mono">—</span>
-            </div>
-            <div class="status-row" id="gatewayUrlRow" hidden>
-              <span class="status-key">Gateway</span>
-              <span id="gatewayUrl" class="status-value mono">—</span>
             </div>
             <div class="status-row">
               <span class="status-key">Cli Proxy API Binary</span>
@@ -158,15 +142,8 @@
             </div>
             <div id="providers" class="providers"></div>
           </div>
-          <div class="vercel-key-section">
-            <p class="meta gateway-hint">Using Vercel AI Gateway is highly recommended when using a Claude Max subscription. It routes requests through an officially supported proxy, avoiding direct OAuth patterns that could flag your Anthropic account.</p>
-            <div class="vercel-key-row">
-              <span class="status-key">Vercel API Key</span>
-              <input id="vercelGatewayApiKey" type="password" class="gateway-input" placeholder="vck_..." />
-            </div>
-          </div>
-          <div class="vercel-key-section" style="margin-top:8px;">
-            <div class="vercel-key-row">
+          <div class="codex-instructions-section" style="margin-top:8px;">
+            <div class="codex-instructions-row">
               <span class="status-key">Codex Instructions</span>
               <label class="toggle-label">
                 <input id="codexInstructionsToggle" type="checkbox" />
@@ -177,8 +154,8 @@
             </div>
             <p class="meta gateway-hint">When enabled, injects official Codex system instructions into Codex API requests. This provides Codex with context about its own capabilities and behavior guidelines, which can improve response quality for coding tasks. Only affects Codex API requests.</p>
           </div>
-          <div class="vercel-key-section" style="margin-top:8px;">
-            <div class="vercel-key-row">
+          <div class="commercial-mode-section" style="margin-top:8px;">
+            <div class="commercial-mode-row">
               <span class="status-key">Commercial Mode</span>
               <label class="toggle-label">
                 <input id="commercialModeToggle" type="checkbox" />

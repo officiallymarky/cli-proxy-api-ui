@@ -27,8 +27,6 @@ pub struct Settings {
     pub config_path: String,
     pub start_proxy_automatically: bool,
     pub providers: Vec<Provider>,
-    pub vercel_gateway_enabled: bool,
-    pub vercel_gateway_api_key: String,
     #[serde(default)]
     pub codex_instructions_enabled: bool,
     #[serde(default)]
@@ -46,8 +44,6 @@ pub struct PartialSettings {
     pub config_path: Option<String>,
     pub start_proxy_automatically: Option<bool>,
     pub providers: Option<Vec<Provider>>,
-    pub vercel_gateway_enabled: Option<bool>,
-    pub vercel_gateway_api_key: Option<String>,
     pub codex_instructions_enabled: Option<bool>,
     pub commercial_mode: Option<bool>,
 }
@@ -275,8 +271,6 @@ pub fn default_settings() -> Result<Settings, String> {
         config_path: config_path.to_string_lossy().into_owned(),
         start_proxy_automatically: false,
         providers: default_providers(),
-        vercel_gateway_enabled: false,
-        vercel_gateway_api_key: String::new(),
         codex_instructions_enabled: false,
         commercial_mode: false,
     })
@@ -304,11 +298,6 @@ pub fn default_config_yaml(auth_dir: &str) -> String {
         "# memory usage under high concurrency. Useful for shared instances with many users."
             .to_string(),
         "commercial-mode: false".to_string(),
-        "".to_string(),
-        "# Vercel AI Gateway".to_string(),
-        "vercel-gateway-enabled: false".to_string(),
-        "vercel-gateway-endpoint: \"https://ai-gateway.vercel.sh\"".to_string(),
-        "vercel-gateway-api-key: \"\"".to_string(),
         "".to_string(),
     ]
     .join("\n")
@@ -341,59 +330,6 @@ pub fn ensure_config_has_auth_dir(config_path: &Path, auth_dir: &str) -> Result<
     if !replaced {
         next_lines.push(auth_line);
     }
-
-    let next = format!("{}\n", next_lines.join("\n"));
-    if next != raw {
-        fs::write(config_path, next).map_err(|e| e.to_string())?;
-    }
-
-    Ok(())
-}
-
-/// Ensure the config file contains gateway-related lines matching settings.
-pub fn ensure_config_has_gateway(
-    config_path: &Path,
-    enabled: bool,
-    api_key: &str,
-) -> Result<(), String> {
-    let raw = fs::read_to_string(config_path).unwrap_or_default();
-
-    let gateway_keys = [
-        "vercel-gateway-enabled:",
-        "vercel-gateway-endpoint:",
-        "vercel-gateway-api-key:",
-    ];
-
-    let mut next_lines: Vec<String> = raw
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim_start();
-            if gateway_keys.iter().any(|k| trimmed.starts_with(k)) {
-                return false;
-            }
-            if trimmed == "# Vercel AI Gateway" {
-                return false;
-            }
-            true
-        })
-        .map(|s| s.to_string())
-        .collect();
-
-    // Remove trailing empty lines to avoid accumulating blanks
-    while next_lines.last().is_some_and(|l| l.trim().is_empty()) {
-        next_lines.pop();
-    }
-
-    next_lines.push(String::new());
-    next_lines.push("# Vercel AI Gateway".to_string());
-    next_lines.push(format!("vercel-gateway-enabled: {}", enabled));
-    next_lines.push("vercel-gateway-endpoint: \"https://ai-gateway.vercel.sh\"".to_string());
-    if !api_key.is_empty() {
-        next_lines.push(format!("vercel-gateway-api-key: \"{}\"", api_key));
-    } else {
-        next_lines.push("vercel-gateway-api-key: \"\"".to_string());
-    }
-    next_lines.push(String::new());
 
     let next = format!("{}\n", next_lines.join("\n"));
     if next != raw {
@@ -634,11 +570,6 @@ pub fn ensure_storage_layout(settings: &Settings) -> Result<(), String> {
     }
 
     ensure_config_has_auth_dir(Path::new(&settings.config_path), &settings.auth_dir)?;
-    ensure_config_has_gateway(
-        Path::new(&settings.config_path),
-        settings.vercel_gateway_enabled,
-        &settings.vercel_gateway_api_key,
-    )?;
     ensure_config_has_codex_instructions(
         Path::new(&settings.config_path),
         settings.codex_instructions_enabled,
@@ -697,12 +628,6 @@ pub fn load_settings(cache: &std::sync::Mutex<Option<Settings>>) -> Result<Setti
         }
         if let Some(v) = partial.providers.filter(|v| !v.is_empty()) {
             settings.providers = v;
-        }
-        if let Some(v) = partial.vercel_gateway_enabled {
-            settings.vercel_gateway_enabled = v;
-        }
-        if let Some(v) = partial.vercel_gateway_api_key {
-            settings.vercel_gateway_api_key = v;
         }
         if let Some(v) = partial.codex_instructions_enabled {
             settings.codex_instructions_enabled = v;

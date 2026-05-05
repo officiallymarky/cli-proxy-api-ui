@@ -19,11 +19,6 @@ const autostartToggle = document.getElementById("autostartToggle");
 const startProxyAutomaticallyInput = document.getElementById("startProxyAutomatically");
 const proxyToggle = document.getElementById("proxyToggle");
 
-const vercelGatewayToggle = document.getElementById("vercelGatewayToggle");
-const vercelGatewayApiKey = document.getElementById("vercelGatewayApiKey");
-const gatewayUrlRow = document.getElementById("gatewayUrlRow");
-const gatewayUrlEl = document.getElementById("gatewayUrl");
-
 const codexInstructionsToggle = document.getElementById("codexInstructionsToggle");
 const commercialModeToggle = document.getElementById("commercialModeToggle");
 
@@ -115,12 +110,6 @@ function applySettingsForm(settings) {
   currentSettings = settings;
   startProxyAutomaticallyInput.checked = Boolean(settings.startProxyAutomatically);
 
-  if (vercelGatewayToggle) {
-    vercelGatewayToggle.checked = Boolean(settings.vercelGatewayEnabled);
-  }
-  if (vercelGatewayApiKey) {
-    vercelGatewayApiKey.value = settings.vercelGatewayApiKey || "";
-  }
   if (codexInstructionsToggle) {
     codexInstructionsToggle.checked = Boolean(settings.codexInstructionsEnabled);
   }
@@ -403,12 +392,6 @@ startProxyAutomaticallyInput.addEventListener("change", () => {
     .catch((err) => showNotice(err.message));
 });
 
-vercelGatewayToggle?.addEventListener("change", async () => {
-  await saveGatewaySettings();
-});
-
-vercelGatewayApiKey?.addEventListener("change", () => saveGatewaySettings());
-
 codexInstructionsToggle?.addEventListener("change", async () => {
   if (!currentSettings) return;
   const next = {
@@ -440,34 +423,6 @@ commercialModeToggle?.addEventListener("change", async () => {
     commercialModeToggle.checked = !commercialModeToggle.checked;
   }
 });
-
-async function saveGatewaySettings() {
-  if (!currentSettings) return;
-  const enabled = vercelGatewayToggle.checked;
-  const next = {
-    ...currentSettings,
-    vercelGatewayEnabled: enabled,
-    vercelGatewayApiKey: vercelGatewayApiKey.value.trim(),
-  };
-  try {
-    const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
-    applySettingsForm(saved);
-    if (gatewayUrlRow && gatewayUrlEl) {
-      if (enabled) {
-        gatewayUrlRow.hidden = false;
-        gatewayUrlEl.textContent = "https://ai-gateway.vercel.sh";
-        gatewayUrlEl.className = "status-value mono good";
-      } else {
-        gatewayUrlRow.hidden = false;
-        gatewayUrlEl.textContent = "Disabled";
-        gatewayUrlEl.className = "status-value mono warn";
-      }
-    }
-    showNotice("Gateway settings saved");
-  } catch (err) {
-    showNotice(err.message);
-  }
-}
 
 themeBulb?.addEventListener("change", () => {
   const mode = themeBulb.checked ? "light" : "dark";
@@ -567,16 +522,6 @@ async function refreshStatus() {
     } else {
       listenUrlEl.textContent = "—";
       listenUrlEl.className = "status-value mono";
-    }
-  }
-
-  if (gatewayUrlRow && gatewayUrlEl) {
-    if (status.gatewayUrl) {
-      gatewayUrlRow.hidden = false;
-      gatewayUrlEl.textContent = status.gatewayEnabled ? status.gatewayUrl : "Disabled";
-      gatewayUrlEl.className = `status-value mono ${status.gatewayEnabled ? "good" : "warn"}`;
-    } else {
-      gatewayUrlRow.hidden = true;
     }
   }
 
