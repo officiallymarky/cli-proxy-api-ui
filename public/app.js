@@ -24,6 +24,8 @@ const gatewayFields = document.getElementById("gatewayFields");
 const gatewayUrlRow = document.getElementById("gatewayUrlRow");
 const gatewayUrlEl = document.getElementById("gatewayUrl");
 
+const codexInstructionsToggle = document.getElementById("codexInstructionsToggle");
+
 const themeToggleBtn = document.getElementById("themeToggle");
 const themeBulb = document.getElementById("themeBulb");
 
@@ -117,6 +119,9 @@ function applySettingsForm(settings) {
   }
   if (vercelGatewayApiKey) {
     vercelGatewayApiKey.value = settings.vercelGatewayApiKey || "";
+  }
+  if (codexInstructionsToggle) {
+    codexInstructionsToggle.checked = Boolean(settings.codexInstructionsEnabled);
   }
 }
 
@@ -399,6 +404,22 @@ vercelGatewayToggle?.addEventListener("change", async () => {
 });
 
 vercelGatewayApiKey?.addEventListener("change", () => saveGatewaySettings());
+
+codexInstructionsToggle?.addEventListener("change", async () => {
+  if (!currentSettings) return;
+  const next = {
+    ...currentSettings,
+    codexInstructionsEnabled: codexInstructionsToggle.checked,
+  };
+  try {
+    const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
+    applySettingsForm(saved);
+    showNotice(`Codex instructions ${codexInstructionsToggle.checked ? "enabled" : "disabled"}`);
+  } catch (err) {
+    showNotice(err.message);
+    codexInstructionsToggle.checked = !codexInstructionsToggle.checked;
+  }
+});
 
 async function saveGatewaySettings() {
   if (!currentSettings) return;
