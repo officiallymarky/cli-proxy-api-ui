@@ -14,6 +14,8 @@ pub struct Provider {
     pub name: String,
     pub enabled: bool,
     pub file_hints: Vec<String>,
+    #[serde(default)]
+    pub reasoning_effort: String,
 }
 
 /// Persistent application settings.
@@ -229,24 +231,28 @@ pub fn default_providers() -> Vec<Provider> {
             name: "Codex".into(),
             enabled: true,
             file_hints: vec!["codex".into(), "openai".into()],
+            reasoning_effort: String::new(),
         },
         Provider {
             id: "claude".into(),
             name: "Claude".into(),
             enabled: true,
             file_hints: vec!["claude".into(), "anthropic".into()],
+            reasoning_effort: String::new(),
         },
         Provider {
             id: "gemini".into(),
             name: "Gemini".into(),
             enabled: true,
             file_hints: vec!["gemini".into(), "google".into()],
+            reasoning_effort: String::new(),
         },
         Provider {
             id: "qwen".into(),
             name: "Qwen".into(),
             enabled: true,
             file_hints: vec!["qwen".into()],
+            reasoning_effort: String::new(),
         },
     ]
 }
@@ -276,6 +282,11 @@ pub fn default_config_yaml(auth_dir: &str) -> String {
         format!("auth-dir: \"{}\"", auth_dir),
         "debug: false".to_string(),
         "usage-statistics-enabled: false".to_string(),
+        "".to_string(),
+        "# Remote management (not yet supported in UI)".to_string(),
+        "remote-management:".to_string(),
+        "  allow-remote: false".to_string(),
+        "  disable-control-panel: true".to_string(),
         "".to_string(),
         "# Vercel AI Gateway".to_string(),
         "vercel-gateway-enabled: false".to_string(),
@@ -375,6 +386,147 @@ pub fn ensure_config_has_gateway(
     Ok(())
 }
 
+/// Lookup table mapping reasoning level names to token budgets (for providers needing numeric values).
+fn reasoning_level_to_budget(provider_id: &str, level: &str) -> Option<u64> {
+    match provider_id {
+        "claude" => match level {
+            "low" => Some(1024),
+            "medium" => Some(8192),
+            "high" => Some(24576),
+            "xhigh" => Some(32768),
+            "max" => Some(64000),
+            _ => None,
+        },
+        "gemini" => match level {
+            "low" => Some(1024),
+            "medium" => Some(8192),
+            "high" => Some(24576),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+/// Return the protocol name used in payload override rules for a provider.
+fn provider_protocol(provider_id: &str) -> &'static str {
+    match provider_id {
+        "codex" => "codex",
+        "claude" => "claude",
+        "gemini" => "gemini",
+        "qwen" => "qwen",
+        _ => "openai",
+    }
+}
+
+/// Return the payload param key for reasoning effort for a given provider.
+fn provider_reasoning_param(provider_id: &str) -> &'static str {
+    match provider_id {
+        "codex" | "qwen" => "reasoning.effort",
+        "gemini" => "generationConfig.thinkingConfig.thinkingBudget",
+        "claude" => "thinking.budget_tokens",
+        _ => "reasoning.effort",
+    }
+}
+
+/// Ensure the config YAML contains payload.override entries for enabled providers
+/// that have a non-empty reasoning_effort configured.
+pub fn ensure_config_has_reasoning_overrides(
+    config_path: &Path,
+    providers: &[Provider],
+) -> Result<(), String> {
+    let raw = fs::read_to_string(config_path).unwrap_or_default();
+    let mut doc: serde_yaml::Value = serde_yaml::from_str(&raw)
+        .unwrap_or(serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
+
+    let mut overrides = serde_yaml::Sequence::new();
+
+    for provider in providers {
+        let effort = provider.reasoning_effort.trim();
+        if !provider.enabled || effort.is_empty() {
+            continue;
+        }
+
+        let protocol = provider_protocol(&provider.id);
+        let param_key = provider_reasoning_param(&provider.id);
+
+        // Codex/Qwen use string-level reasoning.effort; Gemini/Claude need numeric token budgets.
+        let param_value: serde_yaml::Value = if provider.id == "codex" || provider.id == "qwen" {
+            serde_yaml::Value::String(effort.to_string())
+        } else if let Some(budget) = reasoning_level_to_budget(&provider.id, effort) {
+            serde_yaml::Value::Number(serde_yaml::Number::from(budget))
+        } else {
+            // Unknown level; skip.
+            continue;
+        };
+
+        let mut params = serde_yaml::Mapping::new();
+        params.insert(serde_yaml::Value::String(param_key.into()), param_value);
+
+        let mut model_entry = serde_yaml::Mapping::new();
+        model_entry.insert(
+            serde_yaml::Value::String("name".into()),
+            serde_yaml::Value::String("*".into()),
+        );
+        model_entry.insert(
+            serde_yaml::Value::String("protocol".into()),
+            serde_yaml::Value::String(protocol.into()),
+        );
+
+        let mut entry = serde_yaml::Mapping::new();
+        entry.insert(
+            serde_yaml::Value::String("models".into()),
+            serde_yaml::Value::Sequence(vec![serde_yaml::Value::Mapping(model_entry)]),
+        );
+        entry.insert(
+            serde_yaml::Value::String("params".into()),
+            serde_yaml::Value::Mapping(params),
+        );
+
+        overrides.push(serde_yaml::Value::Mapping(entry));
+    }
+
+    // Build the payload section preserving any existing content
+    let existing_payload = doc
+        .as_mapping()
+        .and_then(|m| m.get(serde_yaml::Value::String("payload".into())));
+
+    if overrides.is_empty() {
+        if let Some(mapping) = doc.as_mapping_mut() {
+            mapping.remove(serde_yaml::Value::String("payload".into()));
+        }
+    } else {
+        let payload = if let Some(serde_yaml::Value::Mapping(existing)) = existing_payload {
+            let mut p = existing.clone();
+            p.insert(
+                serde_yaml::Value::String("override".into()),
+                serde_yaml::Value::Sequence(overrides),
+            );
+            p
+        } else {
+            let mut p = serde_yaml::Mapping::new();
+            p.insert(
+                serde_yaml::Value::String("override".into()),
+                serde_yaml::Value::Sequence(overrides),
+            );
+            p
+        };
+
+        if let Some(mapping) = doc.as_mapping_mut() {
+            mapping.insert(
+                serde_yaml::Value::String("payload".into()),
+                serde_yaml::Value::Mapping(payload),
+            );
+        }
+    }
+
+    let next = serde_yaml::to_string(&doc).map_err(|e| e.to_string())?;
+    if next != raw {
+        fs::write(config_path, next).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 /// Create directories and default config file if they don't exist.
 pub fn ensure_storage_layout(settings: &Settings) -> Result<(), String> {
     let config_dir = app_config_dir()?;
@@ -399,6 +551,7 @@ pub fn ensure_storage_layout(settings: &Settings) -> Result<(), String> {
         settings.vercel_gateway_enabled,
         &settings.vercel_gateway_api_key,
     )?;
+    ensure_config_has_reasoning_overrides(Path::new(&settings.config_path), &settings.providers)?;
     Ok(())
 }
 

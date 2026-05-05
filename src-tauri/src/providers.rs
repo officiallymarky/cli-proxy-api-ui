@@ -13,6 +13,8 @@ pub struct ProviderRuntime {
     pub connected: bool,
     pub auth_available: bool,
     pub auth_command: String,
+    #[serde(default)]
+    pub reasoning_effort: String,
 }
 
 /// Collection of providers returned to the frontend.
@@ -52,6 +54,7 @@ pub fn detect_providers(settings: &Settings) -> Vec<ProviderRuntime> {
                 connected,
                 auth_available: auth_flag_for_provider(&provider.id).is_some(),
                 auth_command: auth_command_for_provider(settings, &provider.id).unwrap_or_default(),
+                reasoning_effort: provider.reasoning_effort.clone(),
             }
         })
         .collect()

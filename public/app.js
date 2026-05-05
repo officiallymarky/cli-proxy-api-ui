@@ -131,19 +131,22 @@ function getProviderStyle(id) {
   return PROVIDER_STYLES[id] || { label: id.slice(0, 2).toUpperCase(), color: "var(--text-3)", bg: "var(--panel-inset)" };
 }
 
+function updateProviderSummaries(providers = []) {
+  if (!providerSummaryEl) return;
+  if (providers.length === 0) {
+    providerSummaryEl.innerHTML = '<span class="prov-dot-none">None</span>';
+  } else {
+    providerSummaryEl.innerHTML = providers.map((p) => {
+      const s = getProviderStyle(p.id);
+      return `<span class="prov-badge ${p.connected ? 'on' : 'off'}" title="${p.name}" style="--pc:${s.color};--pb:${s.bg}">${s.label}</span>`;
+    }).join("");
+  }
+}
+
 function renderProviders(providers = []) {
   providersEl.innerHTML = "";
 
-  if (providerSummaryEl) {
-    if (providers.length === 0) {
-      providerSummaryEl.innerHTML = '<span class="prov-dot-none">None</span>';
-    } else {
-      providerSummaryEl.innerHTML = providers.map((p) => {
-        const s = getProviderStyle(p.id);
-        return `<span class="prov-badge ${p.connected ? 'on' : 'off'}" title="${p.name}" style="--pc:${s.color};--pb:${s.bg}">${s.label}</span>`;
-      }).join("");
-    }
-  }
+  updateProviderSummaries(providers);
 
   for (const provider of providers) {
     const item = document.createElement("div");
@@ -182,6 +185,76 @@ function renderProviders(providers = []) {
     status.textContent = provider.connected ? "Connected" : "Not detected";
     status.className = provider.connected ? "provider-status good" : "provider-status warn";
 
+    // Reasoning level select — levels depend on provider
+    const reasoningSelect = document.createElement("select");
+    reasoningSelect.className = "reasoning-select";
+    let reasoningOptions;
+    if (provider.id === "codex") {
+      reasoningOptions = [
+        { v: "", l: "None" },
+        { v: "minimal", l: "Minimal" },
+        { v: "low", l: "Low" },
+        { v: "medium", l: "Medium" },
+        { v: "high", l: "High" },
+        { v: "xhigh", l: "X-High" },
+      ];
+    } else if (provider.id === "claude") {
+      reasoningOptions = [
+        { v: "", l: "None" },
+        { v: "low", l: "Low" },
+        { v: "medium", l: "Medium" },
+        { v: "high", l: "High" },
+        { v: "xhigh", l: "X-High" },
+        { v: "max", l: "Max" },
+      ];
+    } else if (provider.id === "gemini") {
+      reasoningOptions = [
+        { v: "", l: "None" },
+        { v: "low", l: "Low" },
+        { v: "medium", l: "Medium" },
+        { v: "high", l: "High" },
+      ];
+    } else {
+      // qwen, others
+      reasoningOptions = [
+        { v: "", l: "None" },
+        { v: "minimal", l: "Minimal" },
+        { v: "low", l: "Low" },
+        { v: "medium", l: "Medium" },
+        { v: "high", l: "High" },
+      ];
+    }
+    for (const opt of reasoningOptions) {
+      const el = document.createElement("option");
+      el.value = opt.v;
+      el.textContent = opt.l;
+      if (provider.reasoningEffort === opt.v) el.selected = true;
+      reasoningSelect.appendChild(el);
+    }
+    reasoningSelect.addEventListener("change", async () => {
+      if (!currentSettings) return;
+      const updated = currentSettings.providers.map(p =>
+        p.id === provider.id ? { ...p, reasoningEffort: reasoningSelect.value } : p
+      );
+      try {
+        const saved = await req("/api/settings", { method: "POST", body: JSON.stringify({ ...currentSettings, providers: updated }) });
+        applySettingsForm(saved);
+        if (reasoningSelect.value) {
+          showNotice(`${provider.name} reasoning: ${reasoningSelect.value}`);
+        } else {
+          showNotice(`${provider.name} reasoning: none`);
+        }
+        // If the modal is open, refresh the table so selects match server state
+        if (!providersModal.hidden) {
+          const { providers: fresh } = await req("/api/providers");
+          renderProviders(fresh);
+        }
+      } catch (err) {
+        showNotice(err.message);
+        reasoningSelect.value = provider.reasoningEffort || "";
+      }
+    });
+
     const button = document.createElement("button");
     button.className = "btn ghost";
     button.textContent = provider.authAvailable ? "Authenticate" : "Unavailable";
@@ -195,14 +268,16 @@ function renderProviders(providers = []) {
       }
     });
 
-    item.append(name, toggleLabel, status, button);
+    item.append(name, toggleLabel, status, reasoningSelect, button);
     providersEl.appendChild(item);
   }
 }
 
 async function refreshProviders() {
   const { providers } = await req("/api/providers");
-  renderProviders(providers);
+  // Only update summary badges during polling so the modal table isn't
+  // destroyed mid-interaction. Full table rebuilds on modal open and after saves.
+  updateProviderSummaries(providers);
 }
 
 function renderModels(models) {
@@ -368,8 +443,16 @@ document.querySelectorAll(".section-toggle").forEach((el) => {
   });
 });
 
-openProvidersBtn.addEventListener("click", () => {
+openProvidersBtn.addEventListener("click", async () => {
   providersModal.hidden = false;
+  // Rebuild the full provider table when opening the modal, so interactive
+  // controls (toggles, selects) are fresh and match current settings.
+  try {
+    const { providers } = await req("/api/providers");
+    renderProviders(providers);
+  } catch (err) {
+    showNotice(err.message);
+  }
 });
 
 closeProvidersBtn.addEventListener("click", () => {

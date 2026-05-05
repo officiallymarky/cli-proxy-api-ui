@@ -459,7 +459,7 @@ h2 {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  width: min(560px, 92vw);
+  width: min(700px, 95vw);
   max-height: 80vh;
   overflow: auto;
   padding: 16px;
@@ -971,10 +971,10 @@ h2 {
 
 .providers-head {
   display: grid;
-  grid-template-columns: minmax(100px, 1fr) 60px 100px 110px;
-  gap: 8px;
+  grid-template-columns: minmax(80px, 1fr) 55px 80px 110px 105px;
+  gap: 6px;
   padding: 8px 12px;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--text-3);
@@ -983,7 +983,8 @@ h2 {
 }
 
 .providers-head span:nth-child(3),
-.providers-head span:nth-child(4) {
+.providers-head span:nth-child(4),
+.providers-head span:nth-child(5) {
   text-align: right;
 }
 
@@ -996,9 +997,9 @@ h2 {
   background: var(--panel);
   padding: 10px 12px;
   display: grid;
-  grid-template-columns: minmax(100px, 1fr) 60px 100px 110px;
+  grid-template-columns: minmax(80px, 1fr) 55px 80px 110px 105px;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: background 0.6s ease, border-color 0.1s ease;
 }
 
@@ -1030,8 +1031,10 @@ h2 {
 }
 
 .provider .btn {
-  width: 110px;
+  width: 105px;
   justify-self: end;
+  padding: 5px 4px;
+  font-size: 0.72rem;
 }
 
 .provider-toggle {
@@ -1098,6 +1101,39 @@ h2 {
   align-items: center;
   gap: 12px;
   padding: 9px 12px;
+}
+
+/* ── Reasoning level select ── */
+
+.reasoning-select {
+  font-size: 0.7rem;
+  padding: 3px 14px 3px 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--text);
+  cursor: pointer;
+  justify-self: end;
+  width: 100px;
+  transition: background 0.6s ease, border-color 0.6s ease, color 0.6s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%238b919d' d='M1 2l3 3 3-3z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 4px center;
+}
+
+body[data-theme="dark"] .reasoning-select,
+@media (prefers-color-scheme: dark) {
+  body:not([data-theme="light"]) .reasoning-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath fill='%235f6777' d='M1 2l3 3 3-3z'/%3E%3C/svg%3E");
+  }
+}
+
+.reasoning-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-subtle);
 }
 
 /* ── Buttons ── */
