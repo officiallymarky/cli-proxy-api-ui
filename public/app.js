@@ -1,4 +1,5 @@
 const { invoke } = window.__TAURI__.core;
+const { getVersion } = window.__TAURI__.app;
 
 const serverBadge = document.getElementById("serverBadge");
 const listenUrlEl = document.getElementById("listenUrl");
@@ -607,6 +608,13 @@ async function refreshAll() {
 
 async function boot() {
   applyTheme(localStorage.getItem(THEME_KEY) || preferredTheme());
+  try {
+    const version = await getVersion();
+    const badge = document.getElementById("versionBadge");
+    if (badge) badge.textContent = `v${version}`;
+  } catch {
+    // version unavailable, hide badge
+  }
   await refreshSettings();
   await checkAutostart();
   await refreshAll();
