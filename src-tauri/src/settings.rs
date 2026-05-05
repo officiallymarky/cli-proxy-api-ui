@@ -339,9 +339,12 @@ pub fn ensure_config_has_auth_dir(config_path: &Path, auth_dir: &str) -> Result<
     Ok(())
 }
 
-/// Ensure the config file contains the codex-instructions-enabled line.
-pub fn ensure_config_has_codex_instructions(
+/// Ensure the config file contains a boolean field with a preceding comment block.
+/// Removes any existing line matching the key, then appends the comment + key-value at the end.
+fn ensure_config_has_bool_field(
     config_path: &Path,
+    key: &str,
+    comment_lines: &[&str],
     enabled: bool,
 ) -> Result<(), String> {
     let raw = fs::read_to_string(config_path).unwrap_or_default();
@@ -350,19 +353,20 @@ pub fn ensure_config_has_codex_instructions(
         .lines()
         .filter(|line| {
             let trimmed = line.trim_start();
-            !trimmed.starts_with("codex-instructions-enabled:")
+            !trimmed.starts_with(&format!("{key}:"))
         })
         .map(|s| s.to_string())
         .collect();
 
-    // Remove trailing empty lines
     while next_lines.last().is_some_and(|l| l.trim().is_empty()) {
         next_lines.pop();
     }
 
     next_lines.push(String::new());
-    next_lines.push("# Codex instructions injection (Codex only)".to_string());
-    next_lines.push(format!("codex-instructions-enabled: {}", enabled));
+    for comment in comment_lines {
+        next_lines.push(format!("# {comment}"));
+    }
+    next_lines.push(format!("{key}: {enabled}"));
     next_lines.push(String::new());
 
     let next = format!("{}\n", next_lines.join("\n"));
@@ -373,41 +377,30 @@ pub fn ensure_config_has_codex_instructions(
     Ok(())
 }
 
+/// Ensure the config file contains the codex-instructions-enabled line.
+pub fn ensure_config_has_codex_instructions(
+    config_path: &Path,
+    enabled: bool,
+) -> Result<(), String> {
+    ensure_config_has_bool_field(
+        config_path,
+        "codex-instructions-enabled",
+        &["Codex instructions injection (Codex only)"],
+        enabled,
+    )
+}
+
 /// Ensure the config file contains the commercial-mode line.
 pub fn ensure_config_has_commercial_mode(config_path: &Path, enabled: bool) -> Result<(), String> {
-    let raw = fs::read_to_string(config_path).unwrap_or_default();
-
-    let mut next_lines: Vec<String> = raw
-        .lines()
-        .filter(|line| {
-            let trimmed = line.trim_start();
-            !trimmed.starts_with("commercial-mode:")
-        })
-        .map(|s| s.to_string())
-        .collect();
-
-    while next_lines.last().is_some_and(|l| l.trim().is_empty()) {
-        next_lines.pop();
-    }
-
-    next_lines.push(String::new());
-    next_lines.push(
-        "# Commercial mode — disables high-overhead HTTP middleware to reduce per-request"
-            .to_string(),
-    );
-    next_lines.push(
-        "# memory usage under high concurrency. Useful for shared instances with many users."
-            .to_string(),
-    );
-    next_lines.push(format!("commercial-mode: {}", enabled));
-    next_lines.push(String::new());
-
-    let next = format!("{}\n", next_lines.join("\n"));
-    if next != raw {
-        fs::write(config_path, next).map_err(|e| e.to_string())?;
-    }
-
-    Ok(())
+    ensure_config_has_bool_field(
+        config_path,
+        "commercial-mode",
+        &[
+            "Commercial mode — disables high-overhead HTTP middleware to reduce per-request",
+            "memory usage under high concurrency. Useful for shared instances with many users.",
+        ],
+        enabled,
+    )
 }
 
 /// Lookup table mapping reasoning level names to token budgets (for providers needing numeric values).

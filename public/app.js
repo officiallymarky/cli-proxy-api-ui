@@ -184,44 +184,15 @@ function renderProviders(providers = []) {
     status.className = provider.connected ? "provider-status good" : "provider-status warn";
 
     // Reasoning level select — levels depend on provider
+    const reasoningLevels = provider.reasoningLevels || [];
+    const displayLabel = (v) => {
+      if (!v) return "None";
+      if (v === "xhigh") return "X-High";
+      return v.charAt(0).toUpperCase() + v.slice(1);
+    };
     const reasoningSelect = document.createElement("select");
     reasoningSelect.className = "reasoning-select";
-    let reasoningOptions;
-    if (provider.id === "codex") {
-      reasoningOptions = [
-        { v: "", l: "None" },
-        { v: "minimal", l: "Minimal" },
-        { v: "low", l: "Low" },
-        { v: "medium", l: "Medium" },
-        { v: "high", l: "High" },
-        { v: "xhigh", l: "X-High" },
-      ];
-    } else if (provider.id === "claude") {
-      reasoningOptions = [
-        { v: "", l: "None" },
-        { v: "low", l: "Low" },
-        { v: "medium", l: "Medium" },
-        { v: "high", l: "High" },
-        { v: "xhigh", l: "X-High" },
-        { v: "max", l: "Max" },
-      ];
-    } else if (provider.id === "gemini") {
-      reasoningOptions = [
-        { v: "", l: "None" },
-        { v: "low", l: "Low" },
-        { v: "medium", l: "Medium" },
-        { v: "high", l: "High" },
-      ];
-    } else {
-      // qwen, others
-      reasoningOptions = [
-        { v: "", l: "None" },
-        { v: "minimal", l: "Minimal" },
-        { v: "low", l: "Low" },
-        { v: "medium", l: "Medium" },
-        { v: "high", l: "High" },
-      ];
-    }
+    const reasoningOptions = reasoningLevels.map((v) => ({ v, l: displayLabel(v) }));
     for (const opt of reasoningOptions) {
       const el = document.createElement("option");
       el.value = opt.v;
@@ -377,13 +348,7 @@ proxyToggle.addEventListener("change", () => {
   const action = proxyToggle.checked ? "start" : "stop";
   runServerAction(action)
     .then(() => showNotice(`Proxy ${action}ed`))
-    .catch((err) => {
-      showNotice(err.message);
-    })
-    .finally(() => {
-      proxyActionPending = false;
-      refreshStatus().catch(() => {});
-    });
+    .catch((err) => showNotice(err.message));
 });
 
 startProxyAutomaticallyInput.addEventListener("change", () => {
@@ -392,36 +357,26 @@ startProxyAutomaticallyInput.addEventListener("change", () => {
     .catch((err) => showNotice(err.message));
 });
 
-codexInstructionsToggle?.addEventListener("change", async () => {
+function handleToggle(el, field, label) {
   if (!currentSettings) return;
-  const next = {
-    ...currentSettings,
-    codexInstructionsEnabled: codexInstructionsToggle.checked,
-  };
-  try {
-    const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
-    applySettingsForm(saved);
-    showNotice(`Codex instructions ${codexInstructionsToggle.checked ? "enabled" : "disabled"}`);
-  } catch (err) {
-    showNotice(err.message);
-    codexInstructionsToggle.checked = !codexInstructionsToggle.checked;
-  }
+  const next = { ...currentSettings, [field]: el.checked };
+  req("/api/settings", { method: "POST", body: JSON.stringify(next) })
+    .then((saved) => {
+      applySettingsForm(saved);
+      showNotice(`${label} ${el.checked ? "enabled" : "disabled"}`);
+    })
+    .catch((err) => {
+      showNotice(err.message);
+      el.checked = !el.checked;
+    });
+}
+
+codexInstructionsToggle?.addEventListener("change", () => {
+  handleToggle(codexInstructionsToggle, "codexInstructionsEnabled", "Codex instructions");
 });
 
-commercialModeToggle?.addEventListener("change", async () => {
-  if (!currentSettings) return;
-  const next = {
-    ...currentSettings,
-    commercialMode: commercialModeToggle.checked,
-  };
-  try {
-    const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
-    applySettingsForm(saved);
-    showNotice(`Commercial mode ${commercialModeToggle.checked ? "enabled" : "disabled"}`);
-  } catch (err) {
-    showNotice(err.message);
-    commercialModeToggle.checked = !commercialModeToggle.checked;
-  }
+commercialModeToggle?.addEventListener("change", () => {
+  handleToggle(commercialModeToggle, "commercialMode", "Commercial mode");
 });
 
 themeBulb?.addEventListener("change", () => {

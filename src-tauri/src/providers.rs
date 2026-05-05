@@ -15,12 +15,45 @@ pub struct ProviderRuntime {
     pub auth_command: String,
     #[serde(default)]
     pub reasoning_effort: String,
+    #[serde(default)]
+    pub reasoning_levels: Vec<String>,
 }
 
 /// Collection of providers returned to the frontend.
 #[derive(Debug, Serialize)]
 pub struct ProvidersResponse {
     pub providers: Vec<ProviderRuntime>,
+}
+
+/// Return the valid reasoning-effort levels for a given provider.
+/// The empty string represents "None" (no reasoning).
+fn reasoning_levels_for(provider_id: &str) -> Vec<String> {
+    match provider_id {
+        "codex" => vec![
+            String::new(),
+            "minimal".into(),
+            "low".into(),
+            "medium".into(),
+            "high".into(),
+            "xhigh".into(),
+        ],
+        "claude" => vec![
+            String::new(),
+            "low".into(),
+            "medium".into(),
+            "high".into(),
+            "xhigh".into(),
+            "max".into(),
+        ],
+        "gemini" => vec![String::new(), "low".into(), "medium".into(), "high".into()],
+        _ => vec![
+            String::new(),
+            "minimal".into(),
+            "low".into(),
+            "medium".into(),
+            "high".into(),
+        ],
+    }
 }
 
 /// Scan the auth directory and determine which providers are connected.
@@ -55,6 +88,7 @@ pub fn detect_providers(settings: &Settings) -> Vec<ProviderRuntime> {
                 auth_available: auth_flag_for_provider(&provider.id).is_some(),
                 auth_command: auth_command_for_provider(settings, &provider.id).unwrap_or_default(),
                 reasoning_effort: provider.reasoning_effort.clone(),
+                reasoning_levels: reasoning_levels_for(&provider.id),
             }
         })
         .collect()
