@@ -1,10 +1,20 @@
 use directories::ProjectDirs;
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 
 /// Maximum number of log lines retained in memory.
 pub const MAX_LOG_LINES: usize = 450;
+
+/// Generate a random 24-character hex key using /dev/urandom.
+fn generate_local_key() -> String {
+    let mut buf = [0u8; 12];
+    if let Ok(mut f) = fs::File::open("/dev/urandom") {
+        let _ = f.read_exact(&mut buf);
+    }
+    buf.iter().map(|b| format!("{:02x}", b)).collect()
+}
 
 /// An AI provider that can be authenticated via cli-proxy-api.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +41,8 @@ pub struct Settings {
     pub codex_instructions_enabled: bool,
     #[serde(default)]
     pub commercial_mode: bool,
+    #[serde(default)]
+    pub usage_statistics_enabled: bool,
 }
 
 /// Partial settings for lenient deserialization (missing fields use defaults).
@@ -46,6 +58,7 @@ pub struct PartialSettings {
     pub providers: Option<Vec<Provider>>,
     pub codex_instructions_enabled: Option<bool>,
     pub commercial_mode: Option<bool>,
+    pub usage_statistics_enabled: Option<bool>,
 }
 
 /// A single log entry from the proxy process.
@@ -273,6 +286,7 @@ pub fn default_settings() -> Result<Settings, String> {
         providers: default_providers(),
         codex_instructions_enabled: false,
         commercial_mode: false,
+        usage_statistics_enabled: false,
     })
 }
 
@@ -285,10 +299,11 @@ pub fn default_config_yaml(auth_dir: &str) -> String {
         "debug: false".to_string(),
         "usage-statistics-enabled: false".to_string(),
         "".to_string(),
-        "# Remote management (not yet supported in UI)".to_string(),
+        "# Remote management (managed by UI toggle)".to_string(),
         "remote-management:".to_string(),
         "  allow-remote: false".to_string(),
         "  disable-control-panel: true".to_string(),
+        "  secret-key: \"\"".to_string(),
         "".to_string(),
         "# Codex instructions injection (Codex only)".to_string(),
         "codex-instructions-enabled: false".to_string(),
@@ -544,6 +559,92 @@ pub fn ensure_config_has_reasoning_overrides(
     Ok(())
 }
 
+/// Ensure the config YAML contains both `usage-statistics-enabled` and
+/// the `remote-management` section. When enabling, a random 24-char key
+/// is generated and persisted in the config if one does not exist.
+/// When disabling, the remote-management block is reset to its disabled state.
+pub fn ensure_config_has_usage_statistics_and_management(
+    config_path: &Path,
+    enabled: bool,
+) -> Result<(), String> {
+    let raw = fs::read_to_string(config_path).unwrap_or_default();
+    let mut doc: serde_yaml::Value = serde_yaml::from_str(&raw)
+        .unwrap_or(serde_yaml::Value::Mapping(serde_yaml::Mapping::new()));
+
+    let mapping = doc
+        .as_mapping_mut()
+        .ok_or_else(|| "Config root is not a mapping".to_string())?;
+
+    // Set usage-statistics-enabled
+    mapping.insert(
+        serde_yaml::Value::String("usage-statistics-enabled".into()),
+        serde_yaml::Value::Bool(enabled),
+    );
+
+    // Set remote-management section
+    let rm_key = serde_yaml::Value::String("remote-management".into());
+
+    if enabled {
+        let existing = mapping.get(&rm_key).and_then(|v| v.as_mapping());
+
+        let mut rm = if let Some(existing) = existing {
+            existing.clone()
+        } else {
+            serde_yaml::Mapping::new()
+        };
+
+        // Set allow-remote to false
+        rm.insert(
+            serde_yaml::Value::String("allow-remote".into()),
+            serde_yaml::Value::Bool(false),
+        );
+        // Set disable-control-panel to false
+        rm.insert(
+            serde_yaml::Value::String("disable-control-panel".into()),
+            serde_yaml::Value::Bool(false),
+        );
+        // Keep existing secret-key or generate a new one
+        if !rm.contains_key(serde_yaml::Value::String("secret-key".into())) {
+            rm.insert(
+                serde_yaml::Value::String("secret-key".into()),
+                serde_yaml::Value::String(generate_local_key()),
+            );
+        }
+
+        mapping.insert(rm_key, serde_yaml::Value::Mapping(rm));
+    } else {
+        // Reset remote-management to disabled defaults
+        let mut rm = serde_yaml::Mapping::new();
+        rm.insert(
+            serde_yaml::Value::String("allow-remote".into()),
+            serde_yaml::Value::Bool(false),
+        );
+        rm.insert(
+            serde_yaml::Value::String("disable-control-panel".into()),
+            serde_yaml::Value::Bool(true),
+        );
+        // Keep the secret-key if one existed, so re-enabling doesn't break
+        if let Some(existing) = mapping
+            .get(&rm_key)
+            .and_then(|v| v.as_mapping())
+            .and_then(|m| m.get(serde_yaml::Value::String("secret-key".into())))
+        {
+            rm.insert(
+                serde_yaml::Value::String("secret-key".into()),
+                existing.clone(),
+            );
+        }
+        mapping.insert(rm_key, serde_yaml::Value::Mapping(rm));
+    }
+
+    let next = serde_yaml::to_string(&doc).map_err(|e| e.to_string())?;
+    if next != raw {
+        fs::write(config_path, next).map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 /// Create directories and default config file if they don't exist.
 pub fn ensure_storage_layout(settings: &Settings) -> Result<(), String> {
     let config_dir = app_config_dir()?;
@@ -569,6 +670,10 @@ pub fn ensure_storage_layout(settings: &Settings) -> Result<(), String> {
     )?;
     ensure_config_has_commercial_mode(Path::new(&settings.config_path), settings.commercial_mode)?;
     ensure_config_has_reasoning_overrides(Path::new(&settings.config_path), &settings.providers)?;
+    ensure_config_has_usage_statistics_and_management(
+        Path::new(&settings.config_path),
+        settings.usage_statistics_enabled,
+    )?;
     Ok(())
 }
 
@@ -627,6 +732,9 @@ pub fn load_settings(cache: &std::sync::Mutex<Option<Settings>>) -> Result<Setti
         }
         if let Some(v) = partial.commercial_mode {
             settings.commercial_mode = v;
+        }
+        if let Some(v) = partial.usage_statistics_enabled {
+            settings.usage_statistics_enabled = v;
         }
     }
 

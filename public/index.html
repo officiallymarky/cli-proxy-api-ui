@@ -163,7 +163,7 @@
           </div>
           <div class="commercial-mode-section" style="margin-top:8px;">
             <div class="commercial-mode-row">
-              <span class="status-key">Commercial Mode</span>
+              <span class="status-key">Multi User Mode</span>
               <label class="toggle-label">
                 <input id="commercialModeToggle" type="checkbox" />
                 <span class="skeuo-pill">
@@ -171,7 +171,19 @@
                 </span>
               </label>
             </div>
-            <p class="meta gateway-hint" style="color:var(--red);font-weight:500;">Warning: Disables high-overhead HTTP middleware to reduce per-request memory usage. Recommended to keep OFF for single-user instances. Only enable on shared instances with many concurrent users. May disable advanced routing, logging, and request processing features.</p>
+            <p class="meta gateway-hint" style="color:var(--red);font-weight:500;">Recommended to keep OFF for single developer.</p>
+          </div>
+          <div class="usage-stats-section">
+            <div class="usage-stats-row">
+              <span class="status-key">Usage Statistics</span>
+              <label class="toggle-label">
+                <input id="usageStatsToggle" type="checkbox" />
+                <span class="skeuo-pill">
+                  <span class="skeuo-track"></span><i class="skeuo-knob"></i><span class="skeuo-off">OFF</span><span class="skeuo-on">ON</span>
+                </span>
+              </label>
+            </div>
+            <p class="meta gateway-hint">Store Usage Statistics</p>
           </div>
         </div>
       </div>

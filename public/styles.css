@@ -1212,7 +1212,8 @@ input:not([type="checkbox"]):not([type="radio"]):focus {
 /* ── Modal sections ── */
 
 .codex-instructions-section,
-.commercial-mode-section {
+.commercial-mode-section,
+.usage-stats-section {
   background: var(--panel-inset);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius);
@@ -1222,14 +1223,16 @@ input:not([type="checkbox"]):not([type="radio"]):focus {
 }
 
 .codex-instructions-section .gateway-hint,
-.commercial-mode-section .gateway-hint {
+.commercial-mode-section .gateway-hint,
+.usage-stats-section .gateway-hint {
   border-bottom: 1px solid var(--border-subtle);
   margin: 0;
   padding: 10px 12px;
 }
 
 .codex-instructions-row,
-.commercial-mode-row {
+.commercial-mode-row,
+.usage-stats-row {
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;

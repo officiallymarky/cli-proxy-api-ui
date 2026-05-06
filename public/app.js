@@ -21,6 +21,7 @@ const proxyToggle = document.getElementById("proxyToggle");
 
 const codexInstructionsToggle = document.getElementById("codexInstructionsToggle");
 const commercialModeToggle = document.getElementById("commercialModeToggle");
+const usageStatsToggle = document.getElementById("usageStatsToggle");
 
 const themeToggleBtn = document.getElementById("themeToggle");
 const themeBulb = document.getElementById("themeBulb");
@@ -115,6 +116,9 @@ function applySettingsForm(settings) {
   }
   if (commercialModeToggle) {
     commercialModeToggle.checked = Boolean(settings.commercialMode);
+  }
+  if (usageStatsToggle) {
+    usageStatsToggle.checked = Boolean(settings.usageStatisticsEnabled);
   }
 }
 
@@ -376,7 +380,11 @@ codexInstructionsToggle?.addEventListener("change", () => {
 });
 
 commercialModeToggle?.addEventListener("change", () => {
-  handleToggle(commercialModeToggle, "commercialMode", "Commercial mode");
+  handleToggle(commercialModeToggle, "commercialMode", "Multi User mode");
+});
+
+usageStatsToggle?.addEventListener("change", () => {
+  handleToggle(usageStatsToggle, "usageStatisticsEnabled", "Usage statistics");
 });
 
 themeBulb?.addEventListener("change", () => {

@@ -1,6 +1,6 @@
 {
   "name": "cli-proxy-api-ui",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Desktop control panel for cli-proxy-api (no local web server)",
   "type": "module",
   "bin": {
