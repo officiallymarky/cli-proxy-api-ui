@@ -78,8 +78,10 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
 
 #[tauri::command]
 fn get_logs(state: State<AppState>) -> Result<LogsResponse, String> {
+    let logs = state.logs.lock().unwrap();
+    let start = logs.len().saturating_sub(80);
     Ok(LogsResponse {
-        logs: state.logs.lock().unwrap().clone(),
+        logs: logs[start..].to_vec(),
     })
 }
 

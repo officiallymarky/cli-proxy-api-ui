@@ -5,7 +5,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 
 /// Maximum number of log lines retained in memory.
-pub const MAX_LOG_LINES: usize = 450;
+pub const MAX_LOG_LINES: usize = 200;
 
 /// Generate a random 24-character hex key using /dev/urandom.
 fn generate_local_key() -> String {

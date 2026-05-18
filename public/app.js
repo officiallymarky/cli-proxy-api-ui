@@ -314,7 +314,6 @@ function scheduleInitialModelsRefresh(listenUrl) {
 async function refreshLogs() {
   const { logs } = await req("/api/logs");
   logsEl.textContent = logs
-    .slice(-80)
     .map((entry) => `[${new Date(entry.ts).toLocaleTimeString()}] ${entry.source}: ${entry.line}`)
     .join("\n");
   logsEl.scrollTop = logsEl.scrollHeight;

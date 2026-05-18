@@ -53,9 +53,11 @@ pub fn push_log_arc(logs: &Arc<Mutex<Vec<LogEntry>>>, source: &str, text: &str) 
             source: source.to_string(),
             line: line.to_string(),
         });
-        if guard.len() > MAX_LOG_LINES {
-            guard.remove(0);
-        }
+    }
+    let over = guard.len().saturating_sub(MAX_LOG_LINES);
+    if over > 0 {
+        guard.drain(0..over);
+        guard.shrink_to_fit();
     }
 }
 
