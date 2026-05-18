@@ -28,6 +28,16 @@ Wayland sessions are auto-detected and webkit compatibility flags are applied au
 npm run dist
 ```
 
+## macOS note
+
+On Apple Silicon Macs, the app may show "is damaged and cannot be opened" after downloading from a browser. This is caused by macOS Gatekeeper quarantine on ad-hoc signed apps. To fix it, run:
+
+```bash
+xattr -d com.apple.quarantine /Applications/CLI\ Proxy\ API\ UI.app
+```
+
+Right-click → **Open** in Finder also works on first launch as an alternative.
+
 ## Platform defaults
 
 - Settings are saved in the platform config directory (`ProjectDirs`) under `cli-proxy-api-ui/settings.json`
