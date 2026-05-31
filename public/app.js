@@ -17,6 +17,7 @@ const closeProvidersBtn = document.getElementById("closeProviders");
 const autostartToggle = document.getElementById("autostartToggle");
 
 const startProxyAutomaticallyInput = document.getElementById("startProxyAutomatically");
+const startMinimizedToggle = document.getElementById("startMinimizedToggle");
 const proxyToggle = document.getElementById("proxyToggle");
 
 const codexInstructionsToggle = document.getElementById("codexInstructionsToggle");
@@ -110,6 +111,7 @@ function applyTheme(mode) {
 function applySettingsForm(settings) {
   currentSettings = settings;
   startProxyAutomaticallyInput.checked = Boolean(settings.startProxyAutomatically);
+  startMinimizedToggle.checked = Boolean(settings.startMinimized);
 
   if (codexInstructionsToggle) {
     codexInstructionsToggle.checked = Boolean(settings.codexInstructionsEnabled);
@@ -328,7 +330,8 @@ async function saveSettings() {
   if (!currentSettings) return;
   const next = {
     ...currentSettings,
-    startProxyAutomatically: startProxyAutomaticallyInput.checked
+    startProxyAutomatically: startProxyAutomaticallyInput.checked,
+    startMinimized: startMinimizedToggle.checked,
   };
   const saved = await req("/api/settings", { method: "POST", body: JSON.stringify(next) });
   applySettingsForm(saved);
@@ -357,6 +360,12 @@ proxyToggle.addEventListener("change", () => {
 startProxyAutomaticallyInput.addEventListener("change", () => {
   saveSettings()
     .then(() => showNotice("Auto-start setting updated"))
+    .catch((err) => showNotice(err.message));
+});
+
+startMinimizedToggle.addEventListener("change", () => {
+  saveSettings()
+    .then(() => showNotice("Start minimized setting updated"))
     .catch((err) => showNotice(err.message));
 });
 

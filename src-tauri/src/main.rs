@@ -201,6 +201,13 @@ pub fn run() {
 
             let state = app.state::<AppState>();
             if let Ok(settings) = load_settings(&state.settings_cache) {
+                // Minimize to tray on startup if enabled
+                if settings.start_minimized {
+                    if let Some(window) = app.get_webview_window("main") {
+                        let _ = window.hide();
+                    }
+                }
+
                 if settings.start_proxy_automatically {
                     if let Err(err) = server_start_inner(&state) {
                         push_log(&state, "system", &format!("Auto-start failed: {err}"));

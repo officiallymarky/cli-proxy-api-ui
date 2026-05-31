@@ -43,6 +43,8 @@ pub struct Settings {
     pub commercial_mode: bool,
     #[serde(default)]
     pub usage_statistics_enabled: bool,
+    #[serde(default)]
+    pub start_minimized: bool,
 }
 
 /// Partial settings for lenient deserialization (missing fields use defaults).
@@ -59,6 +61,7 @@ pub struct PartialSettings {
     pub codex_instructions_enabled: Option<bool>,
     pub commercial_mode: Option<bool>,
     pub usage_statistics_enabled: Option<bool>,
+    pub start_minimized: Option<bool>,
 }
 
 /// A single log entry from the proxy process.
@@ -287,6 +290,7 @@ pub fn default_settings() -> Result<Settings, String> {
         codex_instructions_enabled: false,
         commercial_mode: false,
         usage_statistics_enabled: false,
+        start_minimized: false,
     })
 }
 
@@ -735,6 +739,9 @@ pub fn load_settings(cache: &std::sync::Mutex<Option<Settings>>) -> Result<Setti
         }
         if let Some(v) = partial.usage_statistics_enabled {
             settings.usage_statistics_enabled = v;
+        }
+        if let Some(v) = partial.start_minimized {
+            settings.start_minimized = v;
         }
     }
 
