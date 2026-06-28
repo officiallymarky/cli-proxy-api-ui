@@ -3,9 +3,11 @@ use crate::settings::{
 };
 use chrono::Utc;
 use std::io::{BufRead, BufReader, Read};
+use std::net::{SocketAddr, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 /// Shared application state managed by Tauri.
 #[derive(Default)]
@@ -14,6 +16,8 @@ pub struct AppState {
     pub server_child: Mutex<Option<Child>>,
     pub started_at: Mutex<Option<String>>,
     pub logs: Arc<Mutex<Vec<LogEntry>>>,
+    pub listener_failure_count: Mutex<u8>,
+    pub last_recovery_at: Mutex<Option<Instant>>,
 }
 
 /// Current status of the proxy process.
@@ -28,6 +32,8 @@ pub struct StatusResponse {
     pub config_valid: bool,
     pub command: String,
     pub listen_url: Option<String>,
+    pub listener_reachable: bool,
+    pub connection_message: String,
 }
 
 /// Collection of log entries returned to the frontend.
@@ -88,8 +94,67 @@ pub fn refresh_process_state(state: &AppState) {
             push_log(state, "system", &format!("Process exited ({status})"));
             *child_guard = None;
             *state.started_at.lock().unwrap() = None;
+            *state.listener_failure_count.lock().unwrap() = 0;
         }
     }
+}
+
+/// Check whether the configured proxy listener is accepting local TCP connections.
+pub fn listener_reachable(port: u16) -> bool {
+    let addr = SocketAddr::from(([127, 0, 0, 1], port));
+    TcpStream::connect_timeout(&addr, Duration::from_millis(250)).is_ok()
+}
+
+/// Restart the proxy after repeated listener failures when application auto-start is enabled.
+pub fn recover_unreachable_listener(
+    state: &AppState,
+    settings: &Settings,
+    running: bool,
+    listener_reachable: bool,
+) {
+    if !settings.start_proxy_automatically || !running || listener_reachable {
+        if listener_reachable {
+            *state.listener_failure_count.lock().unwrap() = 0;
+        }
+        return;
+    }
+
+    let failures = {
+        let mut guard = state.listener_failure_count.lock().unwrap();
+        *guard = guard.saturating_add(1);
+        *guard
+    };
+
+    if failures < 3 {
+        return;
+    }
+
+    let should_restart = {
+        let mut last_guard = state.last_recovery_at.lock().unwrap();
+        let now = Instant::now();
+        let allowed = last_guard
+            .map(|last| now.duration_since(last) >= Duration::from_secs(30))
+            .unwrap_or(true);
+        if allowed {
+            *last_guard = Some(now);
+        }
+        allowed
+    };
+
+    if !should_restart {
+        return;
+    }
+
+    push_log(
+        state,
+        "system",
+        "Proxy process is running but listener is unreachable; restarting",
+    );
+    let _ = server_stop_inner(state);
+    if let Err(err) = server_start_inner(state) {
+        push_log(state, "system", &format!("Recovery restart failed: {err}"));
+    }
+    *state.listener_failure_count.lock().unwrap() = 0;
 }
 
 /// Resolve a binary path: check if it's an absolute/relative path, otherwise search PATH.
@@ -214,6 +279,7 @@ pub fn server_start_inner(state: &AppState) -> Result<(), String> {
     }
 
     *state.started_at.lock().unwrap() = Some(now_iso());
+    *state.listener_failure_count.lock().unwrap() = 0;
     push_log(
         state,
         "system",
@@ -264,6 +330,7 @@ pub fn server_stop_inner(state: &AppState) -> Result<(), String> {
     let _ = child.kill();
     let _ = child.wait();
     *state.started_at.lock().unwrap() = None;
+    *state.listener_failure_count.lock().unwrap() = 0;
     push_log(state, "system", &format!("Stopped process {pid}"));
     Ok(())
 }
@@ -274,4 +341,5 @@ pub fn force_stop(state: &AppState) {
         let _ = child.kill();
         let _ = child.wait();
     }
+    *state.listener_failure_count.lock().unwrap() = 0;
 }

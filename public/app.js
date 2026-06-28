@@ -31,6 +31,7 @@ let currentSettings = null;
 const THEME_KEY = "ui.theme";
 let proxyActionPending = false;
 let latestListenUrl = null;
+let latestListenerReachable = false;
 let initialModelsRefreshTimer = null;
 
 async function req(route, options = {}) {
@@ -274,7 +275,7 @@ async function refreshModels(listenUrl) {
     clearTimeout(initialModelsRefreshTimer);
     initialModelsRefreshTimer = null;
   }
-  if (!listenUrl) {
+  if (!listenUrl || !latestListenerReachable) {
     modelsEl.innerHTML = '<span class="models-empty">No endpoint</span>';
     if (refreshModelsBtn) refreshModelsBtn.disabled = true;
     return;
@@ -290,7 +291,7 @@ async function refreshModels(listenUrl) {
   } catch {
     modelsEl.innerHTML = '<span class="models-empty">Unavailable</span>';
   } finally {
-    if (refreshModelsBtn) refreshModelsBtn.disabled = false;
+    if (refreshModelsBtn) refreshModelsBtn.disabled = !latestListenerReachable;
   }
 }
 
@@ -481,15 +482,27 @@ refreshModelsBtn?.addEventListener("click", (event) => {
 async function refreshStatus() {
   const status = await req("/api/status");
   const nextListenUrl = status.running ? status.listenUrl : null;
-  const connectionChanged = nextListenUrl !== latestListenUrl;
+  const nextListenerReachable = Boolean(status.listenerReachable);
+  const connectionChanged =
+    nextListenUrl !== latestListenUrl || nextListenerReachable !== latestListenerReachable;
   latestListenUrl = nextListenUrl;
-  serverBadge.textContent = status.running && status.pid ? `Running (PID ${status.pid})` : status.running ? "Running" : "Stopped";
-  serverBadge.className = `status-value ${status.running ? "good" : "warn"}`;
+  latestListenerReachable = nextListenerReachable;
+
+  if (status.listenerReachable) {
+    serverBadge.textContent = status.pid ? `Connected (PID ${status.pid})` : "Connected";
+    serverBadge.className = "status-value good";
+  } else if (status.running) {
+    serverBadge.textContent = status.connectionMessage || "Connection unavailable";
+    serverBadge.className = "status-value warn";
+  } else {
+    serverBadge.textContent = "Stopped";
+    serverBadge.className = "status-value warn";
+  }
 
   if (listenUrlEl) {
     if (status.listenUrl) {
       listenUrlEl.textContent = status.listenUrl;
-      listenUrlEl.className = `status-value mono ${status.running ? "good" : "warn"}`;
+      listenUrlEl.className = `status-value mono ${status.listenerReachable ? "good" : "warn"}`;
     } else {
       listenUrlEl.textContent = "—";
       listenUrlEl.className = "status-value mono";
@@ -511,11 +524,27 @@ async function refreshStatus() {
     proxyToggle.disabled = !status.binaryAvailable || proxyActionPending;
   }
 
-  if (refreshModelsBtn) refreshModelsBtn.disabled = !latestListenUrl;
+  if (refreshModelsBtn) refreshModelsBtn.disabled = !latestListenUrl || !latestListenerReachable;
   if (connectionChanged || !modelsEl.innerHTML) {
-    scheduleInitialModelsRefresh(latestListenUrl);
+    if (latestListenerReachable) {
+      scheduleInitialModelsRefresh(latestListenUrl);
+    } else {
+      if (initialModelsRefreshTimer) {
+        clearTimeout(initialModelsRefreshTimer);
+        initialModelsRefreshTimer = null;
+      }
+      modelsEl.innerHTML = latestListenUrl
+        ? '<span class="models-empty">Unavailable</span>'
+        : '<span class="models-empty">No endpoint</span>';
+    }
   }
 }
+
+window.addEventListener("unhandledrejection", (event) => {
+  const message = event.reason?.message || String(event.reason || "Unexpected error");
+  showNotice(message);
+  event.preventDefault();
+});
 
 async function refreshAll() {
   await Promise.all([refreshStatus(), refreshProviders(), refreshLogs()]);

@@ -7,8 +7,8 @@ mod terminal;
 mod tray;
 
 use process::{
-    force_stop, push_log, refresh_process_state, resolve_binary, server_start_inner,
-    server_stop_inner, AppState, LogsResponse, StatusResponse,
+    force_stop, listener_reachable, push_log, recover_unreachable_listener, refresh_process_state,
+    resolve_binary, server_start_inner, server_stop_inner, AppState, LogsResponse, StatusResponse,
 };
 use providers::{detect_providers, ProvidersResponse};
 use settings::{
@@ -61,18 +61,39 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
         resolve_binary(&settings.binary_path).map(|p| p.to_string_lossy().to_string());
     let binary_available = binary_resolved.is_some();
     let config_valid = config_is_valid(&settings);
-    let listen_url =
-        read_config_port(&settings.config_path).map(|port| format!("http://localhost:{port}/v1"));
+    let port = read_config_port(&settings.config_path);
+    let listen_url = port.map(|port| format!("http://127.0.0.1:{port}/v1"));
+    let running = child_guard.is_some();
+    let listener_reachable = running && port.map(listener_reachable).unwrap_or(false);
+    let connection_message = if listener_reachable {
+        "Connected".to_string()
+    } else if running && port.is_some() {
+        "Connection unavailable".to_string()
+    } else if running {
+        "Missing endpoint port".to_string()
+    } else {
+        "Stopped".to_string()
+    };
+
+    drop(child_guard);
+    recover_unreachable_listener(&state, &settings, running, listener_reachable);
 
     Ok(StatusResponse {
-        running: child_guard.is_some(),
-        pid: child_guard.as_ref().map(|child| child.id()),
+        running,
+        pid: state
+            .server_child
+            .lock()
+            .unwrap()
+            .as_ref()
+            .map(|child| child.id()),
         started_at: state.started_at.lock().unwrap().clone(),
         binary_available,
         binary_resolved,
         config_valid,
         command,
         listen_url,
+        listener_reachable,
+        connection_message,
     })
 }
 
