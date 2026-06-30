@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execSync, spawn } from "node:child_process";
-import { existsSync, chmodSync, mkdirSync, createWriteStream } from "node:fs";
+import { existsSync, chmodSync, mkdirSync, createWriteStream, readFileSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { arch, platform } from "node:os";
@@ -11,10 +11,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkgRoot = resolve(__dirname, "..");
 
 // ── Config ───────────────────────────────────────────────────────────────────
-// Set this after creating a GitHub repo and publishing a release.
-const GITHUB_OWNER = "OWNER"; // TODO: replace with your GitHub username/org
+const { version } = JSON.parse(readFileSync(resolve(pkgRoot, "package.json"), "utf-8"));
+const GITHUB_OWNER = "officiallymarky";
 const GITHUB_REPO = "cli-proxy-api-ui";
-const RELEASE_TAG = "v0.1.0";
+const RELEASE_TAG = `v${version}`;
 // ─────────────────────────────────────────────────────────────────────────────
 
 function getPlatformKey() {
