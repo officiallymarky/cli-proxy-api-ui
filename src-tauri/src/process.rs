@@ -18,6 +18,7 @@ pub struct AppState {
     pub logs: Arc<Mutex<Vec<LogEntry>>>,
     pub listener_failure_count: Mutex<u8>,
     pub last_recovery_at: Mutex<Option<Instant>>,
+    pub last_notified_version: Mutex<String>,
 }
 
 /// Current status of the proxy process.

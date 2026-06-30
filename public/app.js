@@ -546,6 +546,54 @@ window.addEventListener("unhandledrejection", (event) => {
   event.preventDefault();
 });
 
+// ── Release Update Banner ──────────────────────────────────────────────────────
+
+const { listen } = window.__TAURI__.event;
+
+let releaseInfo = null;
+
+function showReleaseBanner(info) {
+  const banner = document.getElementById("releaseBanner");
+  const text = document.getElementById("releaseBannerText");
+  if (!banner || !text) return;
+  releaseInfo = info;
+  text.innerHTML = `New release available: <a href="${info.releaseUrl}" target="_blank" rel="noopener noreferrer">${info.latestVersion}</a> (current: v${info.currentVersion})`;
+  banner.hidden = false;
+}
+
+function hideReleaseBanner() {
+  const banner = document.getElementById("releaseBanner");
+  if (banner) banner.hidden = true;
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Listen for new-release events from the Rust backend.
+  listen("new-release", (event) => {
+    if (event.payload) showReleaseBanner(event.payload);
+  });
+
+  const dismissBtn = document.getElementById("dismissReleaseBtn");
+  dismissBtn?.addEventListener("click", hideReleaseBanner);
+
+  const updatesBtn = document.getElementById("checkUpdatesBtn");
+  updatesBtn?.addEventListener("click", () => {
+    checkForUpdates().catch((err) => showNotice(err.message));
+  });
+});
+
+async function checkForUpdates() {
+  try {
+    const info = await invoke("check_updates");
+    if (info) {
+      showReleaseBanner(info);
+    } else {
+      showNotice("You're on the latest version.");
+    }
+  } catch (err) {
+    showNotice(typeof err === "string" ? err : err?.message || "Update check failed");
+  }
+}
+
 async function refreshAll() {
   await Promise.all([refreshStatus(), refreshProviders(), refreshLogs()]);
 }

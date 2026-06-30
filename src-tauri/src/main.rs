@@ -5,6 +5,7 @@ mod providers;
 mod settings;
 mod terminal;
 mod tray;
+mod updates;
 
 use process::{
     force_stop, listener_reachable, push_log, recover_unreachable_listener, refresh_process_state,
@@ -20,7 +21,7 @@ use tray::decode_tray_icon;
 
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
-use tauri::{Manager, State, WindowEvent};
+use tauri::{Emitter, Manager, State, WindowEvent};
 
 fn focus_main_window(app: &tauri::AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -157,6 +158,27 @@ fn run_provider_auth(state: State<AppState>, provider_id: String) -> Result<(), 
     Ok(())
 }
 
+#[tauri::command]
+fn check_updates(state: State<AppState>) -> Result<Option<updates::UpdateInfo>, String> {
+    updates::check_latest_release(&state.last_notified_version)
+}
+
+/// Perform an update check and emit a `new-release` event to the frontend if a new version is found.
+fn perform_update_check(app_handle: &tauri::AppHandle) {
+    let state = app_handle.state::<AppState>();
+    match updates::check_latest_release(&state.last_notified_version) {
+        Ok(Some(info)) if info.is_new => {
+            let _ = app_handle.emit("new-release", &info);
+        }
+        Ok(_) => {}
+        Err(e) => {
+            // Silently ignore errors in background checks (network flakiness, etc.)
+            let state = app_handle.state::<AppState>();
+            crate::process::push_log(&state, "system", &format!("Update check failed: {e}"));
+        }
+    }
+}
+
 // ── App Entry Point ─────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -176,7 +198,8 @@ pub fn run() {
             server_start,
             server_stop,
             server_restart,
-            run_provider_auth
+            run_provider_auth,
+            check_updates
         ])
         .setup(|app| {
             let open = MenuItemBuilder::with_id("open", "Open Control Panel").build(app)?;
@@ -235,6 +258,25 @@ pub fn run() {
                     }
                 }
             }
+
+            // Initialize update notification state from disk.
+            {
+                *state.last_notified_version.lock().unwrap() = updates::load_last_notified_state();
+            }
+
+            // Spawn a background thread to periodically check for new releases.
+            let updater_handle = app.handle().clone();
+            std::thread::spawn(move || {
+                // Initial check after a short delay.
+                std::thread::sleep(std::time::Duration::from_secs(5));
+                perform_update_check(&updater_handle);
+
+                // Repeat every 6 hours.
+                loop {
+                    std::thread::sleep(std::time::Duration::from_secs(6 * 3600));
+                    perform_update_check(&updater_handle);
+                }
+            });
 
             Ok(())
         })
