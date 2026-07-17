@@ -8,8 +8,9 @@ mod tray;
 mod updates;
 
 use process::{
-    force_stop, listener_reachable, push_log, recover_unreachable_listener, refresh_process_state,
-    resolve_binary, server_start_inner, server_stop_inner, AppState, LogsResponse, StatusResponse,
+    force_stop, listener_reachable, push_log, refresh_process_state, resolve_binary,
+    server_start_inner, server_stop_inner, supervise_proxy, AppState, LogsResponse, ProxyPhase,
+    StatusResponse,
 };
 use providers::{detect_providers, ProvidersResponse};
 use settings::{
@@ -43,7 +44,7 @@ fn save_settings(state: State<AppState>, settings: Settings) -> Result<Settings,
     let mut next = settings;
     normalize_settings(&mut next, None)?;
     save_settings_file(&next)?;
-    *state.settings_cache.lock().unwrap() = Some(next.clone());
+    *state.settings_cache.lock() = Some(next.clone());
     Ok(next)
 }
 
@@ -52,7 +53,7 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
     let settings = load_settings(&state.settings_cache)?;
     refresh_process_state(&state);
 
-    let child_guard = state.server_child.lock().unwrap();
+    let child_guard = state.server_child.lock();
     let command = format!(
         "{} {}",
         settings.binary_path,
@@ -66,28 +67,25 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
     let listen_url = port.map(|port| format!("http://127.0.0.1:{port}/v1"));
     let running = child_guard.is_some();
     let listener_reachable = running && port.map(listener_reachable).unwrap_or(false);
+    let lifecycle_phase = state.proxy_lifecycle.lock().phase;
     let connection_message = if listener_reachable {
         "Connected".to_string()
-    } else if running && port.is_some() {
-        "Connection unavailable".to_string()
-    } else if running {
-        "Missing endpoint port".to_string()
     } else {
-        "Stopped".to_string()
+        match lifecycle_phase {
+            ProxyPhase::Starting => "Starting proxy".to_string(),
+            ProxyPhase::Failed => "Proxy startup failed".to_string(),
+            ProxyPhase::Ready if port.is_none() => "Missing endpoint port".to_string(),
+            ProxyPhase::Ready if running => "Connection unavailable".to_string(),
+            ProxyPhase::Stopped | ProxyPhase::Ready => "Stopped".to_string(),
+        }
     };
 
     drop(child_guard);
-    recover_unreachable_listener(&state, &settings, running, listener_reachable);
 
     Ok(StatusResponse {
         running,
-        pid: state
-            .server_child
-            .lock()
-            .unwrap()
-            .as_ref()
-            .map(|child| child.id()),
-        started_at: state.started_at.lock().unwrap().clone(),
+        pid: state.server_child.lock().as_ref().map(|child| child.id()),
+        started_at: state.started_at.lock().clone(),
         binary_available,
         binary_resolved,
         config_valid,
@@ -100,7 +98,7 @@ fn get_status(state: State<AppState>) -> Result<StatusResponse, String> {
 
 #[tauri::command]
 fn get_logs(state: State<AppState>) -> Result<LogsResponse, String> {
-    let logs = state.logs.lock().unwrap();
+    let logs = state.logs.lock();
     let start = logs.len().saturating_sub(80);
     Ok(LogsResponse {
         logs: logs[start..].to_vec(),
@@ -167,10 +165,10 @@ fn check_updates(state: State<AppState>) -> Result<Option<updates::UpdateInfo>, 
 fn perform_update_check(app_handle: &tauri::AppHandle) {
     let state = app_handle.state::<AppState>();
     match updates::check_latest_release(&state.last_notified_version) {
-        Ok(Some(info)) if info.is_new => {
+        Ok(Some(info)) => {
             let _ = app_handle.emit("new-release", &info);
         }
-        Ok(_) => {}
+        Ok(None) => {}
         Err(e) => {
             // Silently ignore errors in background checks (network flakiness, etc.)
             let state = app_handle.state::<AppState>();
@@ -259,9 +257,17 @@ pub fn run() {
                 }
             }
 
+            // Supervise readiness and retries independently of the webview's status polling.
+            let supervisor_handle = app.handle().clone();
+            std::thread::spawn(move || loop {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+                let state = supervisor_handle.state::<AppState>();
+                supervise_proxy(&state);
+            });
+
             // Initialize update notification state from disk.
             {
-                *state.last_notified_version.lock().unwrap() = updates::load_last_notified_state();
+                *state.last_notified_version.lock() = updates::load_last_notified_state();
             }
 
             // Spawn a background thread to periodically check for new releases.
@@ -271,9 +277,9 @@ pub fn run() {
                 std::thread::sleep(std::time::Duration::from_secs(5));
                 perform_update_check(&updater_handle);
 
-                // Repeat every 6 hours.
+                // Repeat once per day while the application remains open.
                 loop {
-                    std::thread::sleep(std::time::Duration::from_secs(6 * 3600));
+                    std::thread::sleep(std::time::Duration::from_secs(24 * 3600));
                     perform_update_check(&updater_handle);
                 }
             });

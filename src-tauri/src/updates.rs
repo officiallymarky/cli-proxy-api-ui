@@ -1,7 +1,7 @@
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Mutex;
 
 use crate::settings::app_config_dir;
 
@@ -117,9 +117,7 @@ pub fn check_latest_release(last_notified: &Mutex<String>) -> Result<Option<Upda
         return Ok(None);
     }
 
-    let mut guard = last_notified
-        .lock()
-        .map_err(|e| format!("Lock error: {e}"))?;
+    let mut guard = last_notified.lock();
 
     let is_new = guard.as_str() != latest_tag;
 

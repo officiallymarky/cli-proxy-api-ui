@@ -1,4 +1,5 @@
 use directories::ProjectDirs;
+use parking_lot::Mutex;
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Read;
@@ -697,8 +698,8 @@ pub fn save_settings_file(settings: &Settings) -> Result<(), String> {
 }
 
 /// Load settings from disk, applying defaults and legacy migration. Caches the result.
-pub fn load_settings(cache: &std::sync::Mutex<Option<Settings>>) -> Result<Settings, String> {
-    if let Some(cached) = cache.lock().unwrap().clone() {
+pub fn load_settings(cache: &Mutex<Option<Settings>>) -> Result<Settings, String> {
+    if let Some(cached) = cache.lock().clone() {
         return Ok(cached);
     }
 
@@ -747,7 +748,7 @@ pub fn load_settings(cache: &std::sync::Mutex<Option<Settings>>) -> Result<Setti
 
     normalize_settings(&mut settings, legacy_args.as_deref())?;
 
-    *cache.lock().unwrap() = Some(settings.clone());
+    *cache.lock() = Some(settings.clone());
     Ok(settings)
 }
 

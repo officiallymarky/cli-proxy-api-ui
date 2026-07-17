@@ -15,6 +15,7 @@ const providersModal = document.getElementById("providersModal");
 const openProvidersBtn = document.getElementById("openProviders");
 const closeProvidersBtn = document.getElementById("closeProviders");
 const autostartToggle = document.getElementById("autostartToggle");
+const updatesBtn = document.getElementById("checkUpdatesBtn");
 
 const startProxyAutomaticallyInput = document.getElementById("startProxyAutomatically");
 const startMinimizedToggle = document.getElementById("startMinimizedToggle");
@@ -495,7 +496,7 @@ async function refreshStatus() {
     serverBadge.textContent = status.connectionMessage || "Connection unavailable";
     serverBadge.className = "status-value warn";
   } else {
-    serverBadge.textContent = "Stopped";
+    serverBadge.textContent = status.connectionMessage || "Stopped";
     serverBadge.className = "status-value warn";
   }
 
@@ -552,11 +553,19 @@ const { listen } = window.__TAURI__.event;
 
 let releaseInfo = null;
 
+function revealUpdateButton(info) {
+  releaseInfo = info;
+  if (!updatesBtn) return;
+  updatesBtn.hidden = false;
+  updatesBtn.title = `View ${info.latestVersion} release`;
+  updatesBtn.setAttribute("aria-label", `View ${info.latestVersion} release`);
+}
+
 function showReleaseBanner(info) {
   const banner = document.getElementById("releaseBanner");
   const text = document.getElementById("releaseBannerText");
   if (!banner || !text) return;
-  releaseInfo = info;
+  revealUpdateButton(info);
   text.innerHTML = `New release available: <a href="${info.releaseUrl}" target="_blank" rel="noopener noreferrer">${info.latestVersion}</a> (current: v${info.currentVersion})`;
   banner.hidden = false;
 }
@@ -567,32 +576,20 @@ function hideReleaseBanner() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Listen for new-release events from the Rust backend.
+  // Listen for release availability from the Rust backend.
   listen("new-release", (event) => {
-    if (event.payload) showReleaseBanner(event.payload);
+    if (!event.payload) return;
+    revealUpdateButton(event.payload);
+    if (event.payload.isNew) showReleaseBanner(event.payload);
   });
-
   const dismissBtn = document.getElementById("dismissReleaseBtn");
   dismissBtn?.addEventListener("click", hideReleaseBanner);
 
-  const updatesBtn = document.getElementById("checkUpdatesBtn");
   updatesBtn?.addEventListener("click", () => {
-    checkForUpdates().catch((err) => showNotice(err.message));
+    if (releaseInfo) showReleaseBanner(releaseInfo);
   });
 });
 
-async function checkForUpdates() {
-  try {
-    const info = await invoke("check_updates");
-    if (info) {
-      showReleaseBanner(info);
-    } else {
-      showNotice("You're on the latest version.");
-    }
-  } catch (err) {
-    showNotice(typeof err === "string" ? err : err?.message || "Update check failed");
-  }
-}
 
 async function refreshAll() {
   await Promise.all([refreshStatus(), refreshProviders(), refreshLogs()]);

@@ -134,6 +134,10 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.release-banner[hidden] {
+  display: none;
+}
+
 .release-banner a {
   color: var(--accent);
   font-weight: 600;
@@ -168,6 +172,10 @@ h1 {
 #checkUpdatesBtn {
   font-size: 0.78rem;
   padding: 4px 10px;
+}
+
+#checkUpdatesBtn[hidden] {
+  display: none;
 }
 
 h2 {
