@@ -1,6 +1,6 @@
 {
   "name": "cli-proxy-api-ui",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "Desktop control panel for cli-proxy-api (no local web server)",
   "type": "module",
   "bin": {
@@ -38,8 +38,7 @@
   "engines": {
     "node": ">=18"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@tauri-apps/cli": "^2.0.0"
+    "@tauri-apps/cli": "^2.12.1"
   }
 }
