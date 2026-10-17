@@ -1,0 +1,10 @@
+# Pin policy for zizmor's `unpinned-uses` audit.
+# Third-party actions must be pinned to a full commit SHA.
+# First-party `actions/*` may stay on a major tag, matching the pinning
+# convention used in .github/workflows.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        "actions/*": ref-pin
+        "*": hash-pin
