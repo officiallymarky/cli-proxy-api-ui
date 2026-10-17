@@ -1,0 +1,23 @@
+# OSV-Scanner policy for this crate's lockfile. It must live beside the
+# lockfile it applies to: osv-scanner.toml does not propagate to child
+# directories, and `just vulns` scans from the repository root.
+#
+# Accepted residuals are recorded with a reason and an expiry, so the scan goes
+# green on a known quantity rather than on silence: after the expiry date the
+# finding returns and blocks again. Every entry here was approved by the owner
+# on 2026-10-17, with the same reasoning as the identical pair in marky.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0449"
+ignoreUntil = 2026-11-06
+reason = "unsafe-libyaml 0.2.11 is an unmaintained YAML backend pulled in transitively by the GTK/GLib stack; no fixed release exists upstream. Revisit: replace it when the stack moves off it."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0429"
+ignoreUntil = 2026-11-06
+reason = "glib 0.18.5 memory-safety advisory. The fix needs glib 0.20, which gtk 0.18.2 pins back (`glib = \"^0.18\"`), and tauri 2.12.3 requires gtk 0.18 — so no reachable upgrade exists from here. Checked 2026-10-17: this crate's seven Rust files call neither VariantStrIter nor array_iter_str, the affected API. Revisit when tauri moves to the gtk 0.20 stack."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2024-0370"
+ignoreUntil = 2026-11-06
+reason = "proc-macro-error 1.0.4 is unmaintained and has no fixed release; it is a compile-time macro helper reached through the GTK stack. A maintenance advisory, not a demonstrated runtime exploit. Revisit: replacement remains required."
