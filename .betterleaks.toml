@@ -1,0 +1,21 @@
+# Betterleaks configuration, passed explicitly with `--config .betterleaks.toml`
+# by the `secrets` recipe and by the commit and push hooks. The default rules
+# stay on. The only addition is an allowlist for build output: it is generated
+# from the sources this scan already covers, so a finding inside it repeats a
+# finding about a source file or reports a vendored crate's compiled metadata.
+# The hooks and CI scan git content, where build output never appears — so
+# anything that ships is still covered. Narrow this list; never widen it to
+# silence a finding about source.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "build output generated from the scanned sources"
+paths = [
+  '''target/''',
+  '''dist/''',
+  '''build/''',
+  '''node_modules/''',
+  '''.venv/''',
+  '''__pycache__/''',
+]

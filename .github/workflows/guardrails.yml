@@ -1,0 +1,76 @@
+name: Guardrails
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  secrets:
+    # Fail-closed secret gate over the full history. The local hooks cover
+    # staged and outgoing content; this covers everything already pushed.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install Betterleaks
+        # Pinned release verified against its published sha256.
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/betterleaks.tar.gz" \
+            https://github.com/betterleaks/betterleaks/releases/download/v1.9.0/betterleaks_1.9.0_linux_x64.tar.gz
+          echo "f8b185a39ffcece2a1ca82bf3a4e7435cd81963ffd16b7a9128daf75f35f6de7  $RUNNER_TEMP/betterleaks.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/betterleaks"
+          tar -xzf "$RUNNER_TEMP/betterleaks.tar.gz" -C "$RUNNER_TEMP/betterleaks"
+          sudo install -m755 "$RUNNER_TEMP/betterleaks/betterleaks" /usr/local/bin/betterleaks
+
+      - name: Secret scan
+        run: betterleaks git . --config .betterleaks.toml --redact --validation=false --no-banner
+
+  dependencies:
+    # Online mode: CI has network access, and the offline database is a
+    # local-machine convenience. Findings block.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install OSV-Scanner
+        # Pinned release verified against its published sha256.
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/osv-scanner" \
+            https://github.com/google/osv-scanner/releases/download/v2.7.0/osv-scanner_linux_amd64
+          echo "160c6253e2922e9e0a6a9771c5c4c40a4b3c6090b34a3cdd5e80c96cc2e4218b  $RUNNER_TEMP/osv-scanner" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/osv-scanner"
+          sudo mv "$RUNNER_TEMP/osv-scanner" /usr/local/bin/osv-scanner
+
+      - name: Dependency scan
+        run: osv-scanner scan source --no-resolve -r .
+
+  workflows:
+    # Workflow correctness and CI security policy.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install actionlint
+        # Pinned release verified against its published sha256.
+        run: |
+          curl -sSfL -o "$RUNNER_TEMP/actionlint.tar.gz" \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+          echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          sudo tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C /usr/local/bin actionlint
+
+      - name: actionlint
+        run: actionlint
+
+      - name: zizmor
+        run: pipx run zizmor==1.30.1 --offline .

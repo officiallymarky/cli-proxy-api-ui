@@ -1,0 +1,27 @@
+#!/bin/sh
+# Repository-local Betterleaks gate for outgoing history.
+#
+# Activate locally with: git config --local core.hooksPath .githooks
+#
+# Git reports every ref update on stdin as
+# "<local ref> <local sha> <remote ref> <remote sha>"; the gate scans each
+# published range and blocks the push on any finding, on a missing scanner, on
+# an unsupported scanner version, on a configuration error, and on a malformed
+# or unresolvable update. The remote name and URL arguments are deliberately
+# neither used nor printed, and nothing is fetched.
+set -eu
+
+case $0 in
+*/*) hook_dir=${0%/*} ;;
+*)
+	hook_dir=$(command -v "$0") || {
+		echo "pre-push: cannot locate $0" >&2
+		exit 1
+	}
+	hook_dir=${hook_dir%/*}
+	;;
+esac
+
+repo_root=$(CDPATH='' cd "$hook_dir/.." && pwd -P) || exit 1
+
+exec python3 "$repo_root/scripts/secret_gate.py" push

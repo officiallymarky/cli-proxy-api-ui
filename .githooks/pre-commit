@@ -1,0 +1,25 @@
+#!/bin/sh
+# Repository-local Betterleaks gate for staged content.
+#
+# Activate locally with: git config --local core.hooksPath .githooks
+#
+# The hook only locates scripts/secret_gate.py and hands it the mode. The gate
+# fails closed: findings, a missing scanner, an unsupported scanner version,
+# or a configuration error all block the commit. No shell text is evaluated
+# and no remote is contacted here.
+set -eu
+
+case $0 in
+*/*) hook_dir=${0%/*} ;;
+*)
+	hook_dir=$(command -v "$0") || {
+		echo "pre-commit: cannot locate $0" >&2
+		exit 1
+	}
+	hook_dir=${hook_dir%/*}
+	;;
+esac
+
+repo_root=$(CDPATH='' cd "$hook_dir/.." && pwd -P) || exit 1
+
+exec python3 "$repo_root/scripts/secret_gate.py" staged
