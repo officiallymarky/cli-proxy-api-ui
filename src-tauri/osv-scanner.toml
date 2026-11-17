@@ -22,3 +22,27 @@ reason = "glib 0.18.5 memory-safety advisory. The fix needs glib 0.20, which gtk
 id = "RUSTSEC-2024-0370"
 ignoreUntil = 2026-12-31
 reason = "proc-macro-error 1.0.4 is unmaintained and has no fixed release; it is a compile-time macro helper reached through the GTK stack. A maintenance advisory, not a demonstrated runtime exploit. Revisit: replacement remains required."
+
+# Approved by the owner on 2026-11-17 while preparing 0.1.16; all four are
+# informational "unmaintained" advisories with no CVSS score and no fixed
+# version. Expiry forces a recheck rather than accepting them silently.
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0543"
+ignoreUntil = 2026-12-31
+reason = "chrono 0.4.45 is unmaintained at every version. This crate still locks it only through serde_with's optional chrono feature (serde_with <- tauri-utils <- tauri 2.12.6, latest); the application's own timestamp code moved to `time` in 0.1.16, so chrono is absent from the build graph (`cargo tree -i chrono` is empty). Revisit when tauri-utils drops the serde_with chrono feature."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0370"
+ignoreUntil = 2026-12-31
+reason = "zvariant 5.15.1 is unmaintained: it was merged into zbus as the `wire` module starting with zbus 6.0. It reaches the build only through zbus 5.19, which tauri-plugin-single-instance 2.5.5 (latest) pins. Revisit when the plugin moves to zbus 6."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0371"
+ignoreUntil = 2026-12-31
+reason = "zbus_names 4.3.5 is unmaintained: it was merged into zbus as the `names` module starting with zbus 6.0. It reaches the build only through zbus 5.19, which tauri-plugin-single-instance 2.5.5 (latest) pins. Revisit when the plugin moves to zbus 6."
+
+[[IgnoredVulns]]
+id = "RUSTSEC-2026-0372"
+ignoreUntil = 2026-12-31
+reason = "zvariant_derive 5.15.1 is unmaintained: its derives moved into zbus starting with zbus 6.0. It reaches the build only through zbus 5.19, which tauri-plugin-single-instance 2.5.5 (latest) pins. Revisit when the plugin moves to zbus 6."

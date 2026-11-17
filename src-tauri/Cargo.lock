@@ -511,10 +511,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aa79e62e7697b8e29b513a68abacf485adcd1fe8284a4316c5ae868e6633327"
 dependencies = [
  "iana-time-zone",
- "js-sys",
  "num-traits",
  "serde",
- "wasm-bindgen",
  "windows-link",
 ]
 
@@ -522,7 +520,6 @@ dependencies = [
 name = "cli-proxy-api-ui"
 version = "0.1.16"
 dependencies = [
- "chrono",
  "directories",
  "image",
  "parking_lot",
@@ -533,6 +530,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-autostart",
  "tauri-plugin-single-instance",
+ "time",
  "ureq",
  "which",
 ]

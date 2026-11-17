@@ -1,7 +1,6 @@
 use crate::settings::{
     build_runtime_args, load_settings, read_config_port, LogEntry, Settings, MAX_LOG_LINES,
 };
-use chrono::Utc;
 use parking_lot::Mutex;
 use std::io::{BufRead, BufReader, Read};
 use std::net::{SocketAddr, TcpStream};
@@ -9,6 +8,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use time::OffsetDateTime;
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(30);
 const LISTENER_FAILURE_GRACE: Duration = Duration::from_secs(10);
@@ -78,7 +78,9 @@ pub struct LogsResponse {
 }
 
 fn now_iso() -> String {
-    Utc::now().to_rfc3339()
+    OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_default()
 }
 
 /// Push log lines into the shared log buffer, trimming old entries.
