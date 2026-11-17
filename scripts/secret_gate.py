@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Final, NamedTuple
 
 SCANNER: Final = "betterleaks"
-SUPPORTED_SERIES: Final = (1, 9)
+SUPPORTED_SERIES: Final = (1, 10)
 CONFIG_FILENAME: Final = ".betterleaks.toml"
 DELETE_REF: Final = "(delete)"
 SCANNER_ENV_PREFIXES: Final = ("BETTERLEAKS_", "GITLEAKS_")
@@ -182,7 +182,10 @@ def scanner_version(*, executable: str, cwd: Path, env: Mapping[str, str]) -> st
     reported = lines[0].strip() if lines else ""
     match = VERSION_RE.match(reported)
     if match is None:
-        raise GateError(f"unrecognized {SCANNER} version; expected 1.9.x")
+        raise GateError(
+            f"unrecognized {SCANNER} version; expected "
+            f"{SUPPORTED_SERIES[0]}.{SUPPORTED_SERIES[1]}.x"
+        )
     series = (int(match.group(1)), int(match.group(2)))
     if series != SUPPORTED_SERIES:
         raise GateError(
